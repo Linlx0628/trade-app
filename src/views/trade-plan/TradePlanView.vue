@@ -282,8 +282,16 @@ async function handleDelete() {
 
 async function handleStatusChange(plan: TradePlan, status: TradePlanStatus) {
   try {
-    await tradePlanStore.updatePlan({ id: plan.id, status })
-    toast({ title: '状态已更新', variant: 'success' })
+    if (status === 'executing') {
+      // 联动：执行计划时自动创建交易日志
+      const { tradePlanApi } = await import('@/lib/tauri')
+      await tradePlanApi.execute(plan.id)
+      await tradePlanStore.fetchPlans(plan.account_id)
+      toast({ title: '已执行', description: `交易日志已自动创建`, variant: 'success' })
+    } else {
+      await tradePlanStore.updatePlan({ id: plan.id, status })
+      toast({ title: '状态已更新', variant: 'success' })
+    }
   } catch {
     toast({ title: '更新失败', variant: 'destructive' })
   }

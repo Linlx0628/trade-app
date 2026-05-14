@@ -48,6 +48,8 @@ export const tradePlanApi = {
   create: (dto: CreateTradePlanDto) => tauriCommand<TradePlan>('create_trade_plan', { dto }),
   update: (dto: UpdateTradePlanDto) => tauriCommand<TradePlan>('update_trade_plan', { dto }),
   delete: (id: string) => tauriCommand<void>('delete_trade_plan', { id }),
+  execute: (planId: string, entryTime?: string) =>
+    tauriCommand<TradeLog>('execute_trade_plan', { planId, entryTime: entryTime || null }),
 }
 
 // Trade Log API

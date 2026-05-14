@@ -82,7 +82,7 @@ pub struct CreateTradePlanDto {
 }
 
 /// 更新交易计划 DTO
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct UpdateTradePlanDto {
     pub id: String,
     #[serde(skip_serializing_if = "Option::is_none")]

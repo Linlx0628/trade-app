@@ -48,6 +48,7 @@ pub fn run() {
             commands::trade_plan::create_trade_plan,
             commands::trade_plan::update_trade_plan,
             commands::trade_plan::delete_trade_plan,
+            commands::trade_plan::execute_trade_plan,
             // 交易日志
             commands::trade_log::get_trade_logs,
             commands::trade_log::get_trade_log,

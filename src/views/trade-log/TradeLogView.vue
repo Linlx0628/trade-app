@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import {
-  Plus, BookOpen, ArrowUpRight, ArrowDownRight, Loader2, Trash2,
+  BookOpen, ArrowUpRight, ArrowDownRight, Loader2, Trash2,
   Pencil, X, Clock, CheckCircle2, Tag,
 } from 'lucide-vue-next'
 import { useTradeLogStore } from '@/stores/trade-log'
@@ -63,8 +63,6 @@ function resetForm() {
   })
   editingLog.value = null
 }
-
-function openCreateForm() { resetForm(); showForm.value = true }
 
 function openEditForm(log: TradeLog) {
   editingLog.value = log
@@ -135,7 +133,12 @@ async function handleDelete() {
 async function handleClosePosition(log: TradeLog) {
   try {
     await logStore.updateLog({ id: log.id, status: 'closed', exit_time: new Date().toISOString().slice(0, 16) })
-    toast({ title: '已平仓', variant: 'success' })
+    // 联动：同步更新关联计划状态为 completed
+    if (log.plan_id) {
+      const { tradePlanApi } = await import('@/lib/tauri')
+      await tradePlanApi.update({ id: log.plan_id, status: 'completed' })
+    }
+    toast({ title: '已平仓', description: log.plan_id ? '关联计划已标记完成' : '', variant: 'success' })
   } catch { toast({ title: '操作失败', variant: 'destructive' }) }
 }
 
@@ -166,9 +169,7 @@ watch(() => accountStore.currentAccount, async (acc) => { if (acc) await logStor
             {{ logStore.totalPnl >= 0 ? '+' : '' }}&yen;{{ formatCurrency(logStore.totalPnl) }}
           </span>
         </div>
-        <Button size="sm" class="gap-2" :disabled="!currentAccount" @click="openCreateForm">
-          <Plus class="w-4 h-4" /> 新建日志
-        </Button>
+        <p class="text-xs text-muted-foreground">日志由交易计划自动生成</p>
       </div>
     </div>
 
@@ -204,7 +205,7 @@ watch(() => accountStore.currentAccount, async (acc) => { if (acc) await logStor
         <CardContent class="flex flex-col items-center justify-center py-12">
           <BookOpen class="w-12 h-12 text-muted-foreground/30 mb-3" />
           <p class="text-muted-foreground text-sm">暂无交易日志</p>
-          <p class="text-muted-foreground/60 text-xs mt-1">点击「新建日志」记录您的交易</p>
+          <p class="text-muted-foreground/60 text-xs mt-1">在交易计划中执行计划后，日志会自动生成</p>
         </CardContent>
       </Card>
 

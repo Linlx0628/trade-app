@@ -58,7 +58,7 @@ fn default_empty_array() -> String { "[]".to_string() }
 fn default_confidence() -> i32 { 5 }
 
 /// 创建交易日志 DTO
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct CreateTradeLogDto {
     pub account_id: String,
     pub plan_id: Option<String>,
