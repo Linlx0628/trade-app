@@ -19,8 +19,11 @@ import {
   Download,
   Upload,
   HardDrive,
+  LayoutTemplate,
+  Pin,
 } from 'lucide-vue-next'
 import { useAccountStore } from '@/stores/account'
+import { useTradeTemplateStore } from '@/stores/trade-template'
 import { useToast } from '@/components/ui/toast'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -44,6 +47,7 @@ import { cn } from '@/lib/utils'
 import type { Account } from '@/types/common'
 
 const accountStore = useAccountStore()
+const templateStore = useTradeTemplateStore()
 const { toast } = useToast()
 
 // --- State ---
@@ -218,6 +222,8 @@ onMounted(async () => {
   if (saved) {
     try { Object.assign(aiConfig, JSON.parse(saved)) } catch {}
   }
+  // Load templates
+  await loadTemplates()
 })
 
 // --- AI Config ---
@@ -309,6 +315,25 @@ async function handleBackup() {
   } catch (e: unknown) {
     toast({ title: '备份失败', description: e instanceof Error ? e.message : String(e), variant: 'destructive' })
   } finally { backingUp.value = false }
+}
+
+// --- Template Management ---
+const templateDeleting = ref<string | null>(null)
+
+async function loadTemplates() {
+  if (accountStore.currentAccount) await templateStore.fetchTemplates(accountStore.currentAccount.id)
+}
+
+async function handleDeleteTemplate(id: string) {
+  templateDeleting.value = id
+  try { await templateStore.deleteTemplate(id); toast({ title: '模板已删除', variant: 'success' }) }
+  catch { toast({ title: '删除失败', variant: 'destructive' }) }
+  finally { templateDeleting.value = null }
+}
+
+async function handleTogglePin(id: string) {
+  try { await templateStore.togglePin(id) }
+  catch { toast({ title: '操作失败', variant: 'destructive' }) }
 }
 </script>
 
@@ -750,6 +775,71 @@ async function handleBackup() {
             <Save v-else class="w-4 h-4" />
             保存配置
           </Button>
+        </div>
+      </CardContent>
+    </Card>
+
+    <!-- Template Management -->
+    <Card>
+      <CardHeader>
+        <div class="flex items-center gap-3">
+          <div class="flex items-center justify-center w-9 h-9 rounded-lg bg-primary/10">
+            <LayoutTemplate class="w-4 h-4 text-primary" />
+          </div>
+          <div>
+            <CardTitle class="text-base">模板管理</CardTitle>
+            <CardDescription class="mt-0.5">管理交易计划模板，置顶常用模板</CardDescription>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div v-if="templateStore.loading" class="flex items-center justify-center py-8">
+          <Loader2 class="w-5 h-5 animate-spin text-muted-foreground" />
+        </div>
+        <div v-else-if="templateStore.templates.length === 0" class="text-center py-8 text-sm text-muted-foreground">
+          暂无模板。可以在交易计划中选择「保存为模板」创建。
+        </div>
+        <div v-else class="space-y-2">
+          <div v-for="t in templateStore.templates" :key="t.id"
+            class="flex items-center gap-3 p-3 rounded-lg border border-border/50 hover:bg-secondary/30 transition-colors">
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2">
+                <span class="text-sm font-medium text-foreground truncate">{{ t.name }}</span>
+                <Badge v-if="t.is_pinned" variant="secondary" class="text-[10px] h-4 px-1.5 gap-0.5">
+                  <Pin class="w-2.5 h-2.5" />置顶
+                </Badge>
+              </div>
+              <div class="flex items-center gap-2 mt-0.5 text-xs text-muted-foreground">
+                <span v-if="t.symbol">{{ t.symbol }}</span>
+                <span v-if="t.symbol">·</span>
+                <span>{{ t.direction === 'long' ? '多' : '空' }}</span>
+                <span>· 使用 {{ t.usage_count }}次</span>
+              </div>
+            </div>
+            <div class="flex items-center gap-1">
+              <Button variant="ghost" size="sm" class="h-7 px-2 text-xs" @click="handleTogglePin(t.id)">
+                <Pin :class="['w-3.5 h-3.5', t.is_pinned ? 'text-primary' : 'text-muted-foreground']" />
+              </Button>
+              <AlertDialog>
+                <AlertDialogTrigger as-child>
+                  <Button variant="ghost" size="icon" class="h-7 w-7 hover:text-loss">
+                    <Loader2 v-if="templateDeleting === t.id" class="w-3.5 h-3.5 animate-spin" />
+                    <Trash2 v-else class="w-3.5 h-3.5" />
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>确认删除模板</AlertDialogTitle>
+                    <AlertDialogDescription>确定要删除模板「{{ t.name }}」吗？</AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>取消</AlertDialogCancel>
+                    <AlertDialogAction @click="handleDeleteTemplate(t.id)">确认删除</AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
+          </div>
         </div>
       </CardContent>
     </Card>

@@ -1,13 +1,12 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   TrendingUp, TrendingDown, BarChart3, Activity,
   Wallet, Target, FileText, BookOpen, Loader2,
 } from 'lucide-vue-next'
 import { useAccountStore } from '@/stores/account'
-import { dashboardApi } from '@/lib/tauri'
-import type { DashboardStats, PnlTrend, SymbolPnl } from '@/lib/tauri'
+import { useDashboardStore } from '@/stores/dashboard'
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 import { Bar } from 'vue-chartjs'
@@ -20,38 +19,23 @@ ChartJS.register(CategoryScale, LinearScale, BarElement, PointElement, LineEleme
 
 const router = useRouter()
 const accountStore = useAccountStore()
+const dashboardStore = useDashboardStore()
 
-const stats = ref<DashboardStats | null>(null)
-const pnlTrend = ref<PnlTrend[]>([])
-const symbolPnl = ref<SymbolPnl[]>([])
-const loading = ref(false)
+const stats = computed(() => dashboardStore.stats)
+const pnlTrend = computed(() => dashboardStore.pnlTrend)
+const symbolPnl = computed(() => dashboardStore.symbolPnl)
+const loading = computed(() => dashboardStore.loading)
 
 const currentAccount = computed(() => accountStore.currentAccount)
-
-async function loadData() {
-  if (!currentAccount.value) return
-  loading.value = true
-  try {
-    const [s, t, p] = await Promise.all([
-      dashboardApi.getStats(currentAccount.value.id),
-      dashboardApi.getPnlTrend(currentAccount.value.id, 30),
-      dashboardApi.getSymbolPnl(currentAccount.value.id),
-    ])
-    stats.value = s
-    pnlTrend.value = t
-    symbolPnl.value = p
-  } catch { /* silent */ }
-  finally { loading.value = false }
-}
 
 onMounted(async () => {
   await accountStore.fetchAccounts()
   if (!accountStore.currentAccount && accountStore.accounts.length > 0)
     await accountStore.selectAccount(accountStore.accounts[0].id)
-  if (accountStore.currentAccount) await loadData()
+  if (accountStore.currentAccount) await dashboardStore.fetchAll(accountStore.currentAccount.id)
 })
 
-watch(() => accountStore.currentAccount, (acc) => { if (acc) loadData() })
+watch(() => accountStore.currentAccount, (acc) => { if (acc) dashboardStore.fetchAll(acc.id) })
 
 function fmt(v: number) { return new Intl.NumberFormat('zh-CN', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(v) }
 
