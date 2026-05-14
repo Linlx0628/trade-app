@@ -146,20 +146,20 @@ async function handleClosePosition(log: TradeLog) {
 function parseTags(s: string): string[] { try { return JSON.parse(s || '[]') } catch { return [] } }
 
 // --- AI Analysis ---
-const ai = useAi()
+const { loading: aiLoading, result: aiResult, analyze: aiAnalyze, getConfig: aiGetConfig } = useAi()
 const aiLogId = ref<string | null>(null)
 
 async function aiAnalyzeLog(log: TradeLog) {
-  if (!ai.getConfig()) {
+  if (!aiGetConfig()) {
     toast({ title: '请先配置 AI', description: '前往设置页面填写 API Key', variant: 'destructive' })
     return
   }
   aiLogId.value = log.id
-  const err = await ai.analyze([
+  const err = await aiAnalyze([
     { role: 'system', content: '你是一位专业的交易心理和执行分析师。基于单笔交易数据，提供简洁的交易点评，包括：1) 执行评价 2) 盈亏分析 3) 心理状态评估 4) 改进建议。回复用中文，不超过300字。' },
     { role: 'user', content: `请点评以下交易：\n品种: ${log.symbol} (${log.name || log.symbol})\n方向: ${log.direction === 'long' ? '做多' : '做空'}\n入场: ${log.entry_price} / 出场: ${log.exit_price || '未平仓'}\n盈亏: ${log.pnl >= 0 ? '+' : ''}${log.pnl.toFixed(0)}元\n信心指数: ${log.confidence}/10` },
   ])
-  if (err && !ai.result.value) {
+  if (err && !aiResult.value) {
     toast({ title: 'AI 分析失败', description: String(err), variant: 'destructive' })
   }
 }
@@ -280,8 +280,8 @@ watch(() => accountStore.currentAccount, async (acc) => { if (acc) await logStor
                   </span>
                 </div>
                 <div class="flex items-center gap-1">
-                  <Button v-if="log.status === 'closed'" variant="outline" size="sm" class="h-8 gap-1.5 text-xs px-3" @click.stop="aiAnalyzeLog(log)" :disabled="ai.loading">
-                    <Loader2 v-if="ai.loading && aiLogId === log.id" class="w-3.5 h-3.5 animate-spin" />
+                  <Button v-if="log.status === 'closed'" variant="outline" size="sm" class="h-8 gap-1.5 text-xs px-3" @click.stop="aiAnalyzeLog(log)" :disabled="aiLoading">
+                    <Loader2 v-if="aiLoading && aiLogId === log.id" class="w-3.5 h-3.5 animate-spin" />
                     <Sparkles v-else class="w-3.5 h-3.5 text-primary" />AI 点评
                   </Button>
                   <Button v-if="log.status === 'open'" variant="outline" size="sm" class="h-8 text-xs px-3"
@@ -310,14 +310,14 @@ watch(() => accountStore.currentAccount, async (acc) => { if (acc) await logStor
             <p v-if="log.notes" class="mt-3 pt-3 border-t border-border/50 text-xs text-muted-foreground line-clamp-2">{{ log.notes }}</p>
 
             <!-- AI Analysis Result -->
-            <div v-if="aiLogId === log.id && (ai.loading || ai.result)" class="mt-3 pt-3 border-t border-primary/20 rounded-lg bg-primary/5 p-3">
+            <div v-if="aiLogId === log.id && (aiLoading || aiResult)" class="mt-3 pt-3 border-t border-primary/20 rounded-lg bg-primary/5 p-3">
               <div class="flex items-center gap-1.5 mb-2">
                 <Sparkles class="w-3.5 h-3.5 text-primary" />
                 <span class="text-xs font-medium text-primary">AI 交易点评</span>
-                <Loader2 v-if="ai.loading" class="w-3 h-3 animate-spin text-primary ml-auto" />
+                <Loader2 v-if="aiLoading" class="w-3 h-3 animate-spin text-primary ml-auto" />
               </div>
-              <div v-if="ai.loading" class="text-xs text-muted-foreground">正在分析中...</div>
-              <p v-else class="text-xs text-foreground/80 whitespace-pre-wrap leading-relaxed">{{ ai.result }}</p>
+              <div v-if="aiLoading" class="text-xs text-muted-foreground">正在分析中...</div>
+              <p v-else class="text-xs text-foreground/80 whitespace-pre-wrap leading-relaxed">{{ aiResult }}</p>
             </div>
           </CardContent>
         </Card>

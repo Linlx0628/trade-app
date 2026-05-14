@@ -114,20 +114,20 @@ async function handleDelete() {
 function typeLabel(t: string) { return t === 'daily' ? '日总结' : t === 'weekly' ? '周总结' : '月总结' }
 
 // --- AI Analysis ---
-const ai = useAi()
+const { loading: aiLoading, result: aiResult, analyze: aiAnalyze, getConfig: aiGetConfig } = useAi()
 const aiResultFor = ref<string | null>(null)
 
 async function aiAnalyzeSummary(s: TradeSummary) {
-  if (!ai.getConfig()) {
+  if (!aiGetConfig()) {
     toast({ title: '请先配置 AI', description: '前往设置页面填写 API Key', variant: 'destructive' })
     return
   }
   aiResultFor.value = s.id
-  const err = await ai.analyze([
+  const err = await aiAnalyze([
     { role: 'system', content: '你是一位专业的交易复盘分析师。基于交易统计数据，提供简洁实用的复盘建议，包括：1) 交易表现评价 2) 风险管理建议 3) 可改进之处 4) 下一步行动计划。回复用中文，不超过500字。' },
     { role: 'user', content: `请分析以下${typeLabel(s.summary_type)}交易数据（日期: ${s.summary_date}）：\n总交易: ${s.total_trades}笔 (${s.win_trades}胜/${s.loss_trades}负)\n胜率: ${(s.win_rate * 100).toFixed(1)}%\n净盈亏: ${s.net_pnl >= 0 ? '+' : ''}${s.net_pnl.toFixed(0)}元\n盈亏比: ${s.profit_factor.toFixed(2)}\n最大盈利: ${s.max_profit.toFixed(0)}元 / 最大亏损: ${s.max_loss.toFixed(0)}元\n平均盈利: ${s.avg_profit.toFixed(0)}元 / 平均亏损: ${s.avg_loss.toFixed(0)}元\n情绪评分: ${s.emotion_score}/10` },
   ])
-  if (err && !ai.result.value) {
+  if (err && !aiResult.value) {
     toast({ title: 'AI 分析失败', description: String(err), variant: 'destructive' })
   }
 }
@@ -204,8 +204,8 @@ watch(() => accountStore.currentAccount, async (acc) => { if (acc) await summary
                 </div>
               </div>
               <div class="flex items-center gap-1">
-                <Button variant="outline" size="sm" class="h-8 gap-1.5 text-xs px-3" @click.stop="aiAnalyzeSummary(s)" :disabled="ai.loading">
-                  <Loader2 v-if="ai.loading && aiResultFor === s.id" class="w-3.5 h-3.5 animate-spin" />
+                <Button variant="outline" size="sm" class="h-8 gap-1.5 text-xs px-3" @click.stop="aiAnalyzeSummary(s)" :disabled="aiLoading">
+                  <Loader2 v-if="aiLoading && aiResultFor === s.id" class="w-3.5 h-3.5 animate-spin" />
                   <Sparkles v-else class="w-3.5 h-3.5 text-primary" />AI 复盘
                 </Button>
                 <div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -279,14 +279,14 @@ watch(() => accountStore.currentAccount, async (acc) => { if (acc) await summary
             </div>
 
             <!-- AI Analysis Result -->
-            <div v-if="aiResultFor === s.id && (ai.loading || ai.result)" class="mt-3 pt-3 border-t border-primary/20 rounded-lg bg-primary/5 p-3">
+            <div v-if="aiResultFor === s.id && (aiLoading || aiResult)" class="mt-3 pt-3 border-t border-primary/20 rounded-lg bg-primary/5 p-3">
               <div class="flex items-center gap-1.5 mb-2">
                 <Sparkles class="w-3.5 h-3.5 text-primary" />
                 <span class="text-xs font-medium text-primary">AI 复盘分析</span>
-                <Loader2 v-if="ai.loading" class="w-3 h-3 animate-spin text-primary ml-auto" />
+                <Loader2 v-if="aiLoading" class="w-3 h-3 animate-spin text-primary ml-auto" />
               </div>
-              <div v-if="ai.loading" class="text-xs text-muted-foreground">正在分析中...</div>
-              <p v-else class="text-xs text-foreground/80 whitespace-pre-wrap leading-relaxed">{{ ai.result }}</p>
+              <div v-if="aiLoading" class="text-xs text-muted-foreground">正在分析中...</div>
+              <p v-else class="text-xs text-foreground/80 whitespace-pre-wrap leading-relaxed">{{ aiResult }}</p>
             </div>
           </CardContent>
         </Card>

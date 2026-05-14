@@ -335,20 +335,20 @@ function parseTags(tagsStr: string): string[] {
 }
 
 // --- AI Strategy ---
-const ai = useAi()
+const { loading: aiLoading, result: aiResult, analyze: aiAnalyze, getConfig: aiGetConfig } = useAi()
 const aiPlanId = ref<string | null>(null)
 
 async function aiAnalyzePlan(plan: TradePlan) {
-  if (!ai.getConfig()) {
+  if (!aiGetConfig()) {
     toast({ title: '请先配置 AI', description: '前往设置页面填写 API Key', variant: 'destructive' })
     return
   }
   aiPlanId.value = plan.id
-  const err = await ai.analyze([
+  const err = await aiAnalyze([
     { role: 'system', content: '你是一位专业的期货/股票交易策略顾问。基于交易计划参数，提供简洁的风险评估和策略建议，包括：1) 风险评估 2) 入场时机分析 3) 盈亏比评价 4) 关键注意事项。回复用中文，不超过400字。' },
     { role: 'user', content: `请分析以下交易计划：\n品种: ${plan.symbol} (${plan.name || plan.symbol})\n方向: ${plan.direction === 'long' ? '做多' : '做空'}\n入场: ${plan.entry_price} / 止损: ${plan.stop_loss} / 止盈: ${plan.take_profit}\n手数: ${plan.lots}\n市场: ${plan.market_type === 'futures' ? '期货' : '股票'}\n策略: ${plan.strategy || '未填写'}` },
   ])
-  if (err && !ai.result.value) {
+  if (err && !aiResult.value) {
     toast({ title: 'AI 分析失败', description: String(err), variant: 'destructive' })
   }
 }
@@ -526,8 +526,8 @@ watch(() => accountStore.currentAccount, async (acc) => {
 
                 <!-- Actions -->
                 <div class="flex items-center gap-1">
-                  <Button variant="outline" size="sm" class="h-8 gap-1.5 text-xs px-3" @click.stop="aiAnalyzePlan(plan)" :disabled="ai.loading">
-                    <Loader2 v-if="ai.loading && aiPlanId === plan.id" class="w-3.5 h-3.5 animate-spin" />
+                  <Button variant="outline" size="sm" class="h-8 gap-1.5 text-xs px-3" @click.stop="aiAnalyzePlan(plan)" :disabled="aiLoading">
+                    <Loader2 v-if="aiLoading && aiPlanId === plan.id" class="w-3.5 h-3.5 animate-spin" />
                     <Sparkles v-else class="w-3.5 h-3.5 text-primary" />AI 建议
                   </Button>
                   <div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -582,14 +582,14 @@ watch(() => accountStore.currentAccount, async (acc) => {
             </p>
 
             <!-- AI Analysis Result -->
-            <div v-if="aiPlanId === plan.id && (ai.loading || ai.result)" class="mt-3 pt-3 border-t border-primary/20 rounded-lg bg-primary/5 p-3">
+            <div v-if="aiPlanId === plan.id && (aiLoading || aiResult)" class="mt-3 pt-3 border-t border-primary/20 rounded-lg bg-primary/5 p-3">
               <div class="flex items-center gap-1.5 mb-2">
                 <Sparkles class="w-3.5 h-3.5 text-primary" />
                 <span class="text-xs font-medium text-primary">AI 策略建议</span>
-                <Loader2 v-if="ai.loading" class="w-3 h-3 animate-spin text-primary ml-auto" />
+                <Loader2 v-if="aiLoading" class="w-3 h-3 animate-spin text-primary ml-auto" />
               </div>
-              <div v-if="ai.loading" class="text-xs text-muted-foreground">正在分析中...</div>
-              <p v-else class="text-xs text-foreground/80 whitespace-pre-wrap leading-relaxed">{{ ai.result }}</p>
+              <div v-if="aiLoading" class="text-xs text-muted-foreground">正在分析中...</div>
+              <p v-else class="text-xs text-foreground/80 whitespace-pre-wrap leading-relaxed">{{ aiResult }}</p>
             </div>
           </CardContent>
         </Card>

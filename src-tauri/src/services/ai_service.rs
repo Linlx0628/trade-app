@@ -59,9 +59,10 @@ impl AiService {
 
     async fn call_anthropic(req: &AiChatRequest) -> Result<AiChatResponse, AppError> {
         let base_url = if req.config.base_url.is_empty() {
-            "https://api.anthropic.com".to_string()
+            "https://api.anthropic.com/v1".to_string()
         } else {
-            req.config.base_url.clone()
+            let url = req.config.base_url.trim_end_matches('/').to_string();
+            url
         };
         let model = if req.config.model.is_empty() { "claude-sonnet-4-20250514".to_string() } else { req.config.model.clone() };
 
@@ -77,7 +78,7 @@ impl AiService {
         });
 
         let client = reqwest::Client::new();
-        let resp = client.post(format!("{}/v1/messages", base_url))
+        let resp = client.post(format!("{}/messages", base_url))
             .header("x-api-key", &req.config.api_key)
             .header("anthropic-version", "2023-06-01")
             .header("content-type", "application/json")
@@ -108,9 +109,10 @@ impl AiService {
 
     async fn call_openai(req: &AiChatRequest) -> Result<AiChatResponse, AppError> {
         let base_url = if req.config.base_url.is_empty() {
-            "https://api.openai.com".to_string()
+            "https://api.openai.com/v1".to_string()
         } else {
-            req.config.base_url.clone()
+            let url = req.config.base_url.trim_end_matches('/').to_string();
+            url
         };
         let model = if req.config.model.is_empty() { "gpt-4o".to_string() } else { req.config.model.clone() };
 
@@ -126,7 +128,7 @@ impl AiService {
         });
 
         let client = reqwest::Client::new();
-        let resp = client.post(format!("{}/v1/chat/completions", base_url))
+        let resp = client.post(format!("{}/chat/completions", base_url))
             .header("Authorization", format!("Bearer {}", req.config.api_key))
             .header("content-type", "application/json")
             .json(&body)
