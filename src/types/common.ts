@@ -267,3 +267,70 @@ export interface AiChatResponse {
   model: string
   usage: { prompt_tokens: number; completion_tokens: number }
 }
+
+export interface TradeTemplate {
+  id: string
+  account_id: string
+  name: string
+  description: string
+  symbol: string
+  direction: string
+  market_type: string
+  strategy: string
+  tags: string
+  stop_loss_ratio: number
+  take_profit_ratio: number
+  default_lots: number
+  notes: string
+  usage_count: number
+  sort_order: number
+  is_pinned: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface CreateTradeTemplateDto {
+  account_id: string
+  name: string
+  description?: string
+  symbol?: string
+  direction?: string
+  market_type?: string
+  strategy?: string
+  tags?: string[]
+  stop_loss_ratio?: number
+  take_profit_ratio?: number
+  default_lots?: number
+  notes?: string
+}
+
+export interface UpdateTradeTemplateDto {
+  id: string
+  name?: string
+  description?: string
+  symbol?: string
+  direction?: string
+  market_type?: string
+  strategy?: string
+  tags?: string[]
+  stop_loss_ratio?: number
+  take_profit_ratio?: number
+  default_lots?: number
+  notes?: string
+  sort_order?: number
+  is_pinned?: boolean
+}
+
+export interface CreateTemplateFromPlanDto {
+  plan_id: string
+  template_name: string
+  template_description?: string
+}
+
+export interface CreatePlanFromTemplateDto {
+  template_id: string
+  account_id: string
+  entry_price: number
+  planned_at?: string
+  actual_lots?: number
+}

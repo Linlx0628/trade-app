@@ -16,6 +16,11 @@ import type {
   UpdateTradeSummaryDto,
   AiChatRequest,
   AiChatResponse,
+  TradeTemplate,
+  CreateTradeTemplateDto,
+  UpdateTradeTemplateDto,
+  CreateTemplateFromPlanDto,
+  CreatePlanFromTemplateDto,
 } from '@/types/common'
 
 export async function tauriCommand<T>(command: string, args?: Record<string, unknown>): Promise<T> {
@@ -77,4 +82,22 @@ export const tradeSummaryApi = {
 // AI API
 export const aiApi = {
   chat: (req: AiChatRequest) => tauriCommand<AiChatResponse>('ai_chat', { req }),
+}
+
+// Trade Template API
+export const tradeTemplateApi = {
+  getAll: (accountId: string) =>
+    tauriCommand<TradeTemplate[]>('get_trade_templates', { accountId }),
+  getById: (id: string) =>
+    tauriCommand<TradeTemplate>('get_trade_template', { id }),
+  create: (dto: CreateTradeTemplateDto) =>
+    tauriCommand<TradeTemplate>('create_trade_template', { dto }),
+  update: (dto: UpdateTradeTemplateDto) =>
+    tauriCommand<TradeTemplate>('update_trade_template', { dto }),
+  delete: (id: string) =>
+    tauriCommand<void>('delete_trade_template', { id }),
+  createFromPlan: (dto: CreateTemplateFromPlanDto) =>
+    tauriCommand<TradeTemplate>('create_template_from_plan', { dto }),
+  createPlanFromTemplate: (dto: CreatePlanFromTemplateDto) =>
+    tauriCommand<TradePlan>('create_plan_from_template', { dto }),
 }

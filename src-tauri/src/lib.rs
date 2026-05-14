@@ -63,6 +63,14 @@ pub fn run() {
             commands::trade_summary::delete_trade_summary,
             // AI
             commands::ai::ai_chat,
+            // 交易模板
+            commands::trade_template::get_trade_templates,
+            commands::trade_template::get_trade_template,
+            commands::trade_template::create_trade_template,
+            commands::trade_template::update_trade_template,
+            commands::trade_template::delete_trade_template,
+            commands::trade_template::create_template_from_plan,
+            commands::trade_template::create_plan_from_template,
         ])
         .run(tauri::generate_context!())
         .expect("运行 Tauri 应用时出错");

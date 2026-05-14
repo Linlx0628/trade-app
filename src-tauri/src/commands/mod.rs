@@ -5,3 +5,4 @@ pub mod ai;
 pub mod trade_log;
 pub mod trade_plan;
 pub mod trade_summary;
+pub mod trade_template;

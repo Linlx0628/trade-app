@@ -6,6 +6,7 @@ pub mod account_repo;
 pub mod trade_log_repo;
 pub mod trade_plan_repo;
 pub mod trade_summary_repo;
+pub mod trade_template_repo;
 
 use rusqlite::Connection;
 use std::sync::Mutex;
@@ -30,7 +31,7 @@ pub fn init_db(app: &mut tauri::App) -> Result<DbState, crate::error::AppError> 
     std::fs::create_dir_all(&app_dir)
         .map_err(|e| crate::error::AppError::Database(format!("无法创建数据目录: {}", e)))?;
 
-    let db_path = app_dir.join("tradeapp.db");
+    let db_path = app_dir.join("trademind.db");
 
     // 打开数据库连接
     let conn = Connection::open(&db_path)
@@ -73,6 +74,11 @@ fn run_migrations(conn: &Connection) -> Result<(), crate::error::AppError> {
             1,
             "001_init",
             include_str!("../../migrations/001_init.sql"),
+        ),
+        (
+            2,
+            "002_add_templates",
+            include_str!("../../migrations/002_add_templates.sql"),
         ),
     ];
 
