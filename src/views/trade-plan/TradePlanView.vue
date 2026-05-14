@@ -519,11 +519,12 @@ watch(() => accountStore.currentAccount, async (acc) => {
                 </div>
 
                 <!-- Actions -->
-                <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Button variant="ghost" size="sm" class="h-6 gap-1 text-[10px] px-2" @click.stop="aiAnalyzePlan(plan)" :disabled="ai.loading">
-                    <Loader2 v-if="ai.loading && aiPlanId === plan.id" class="w-3 h-3 animate-spin" />
-                    <Sparkles v-else class="w-3 h-3" />AI 建议
+                <div class="flex items-center gap-1">
+                  <Button variant="outline" size="sm" class="h-8 gap-1.5 text-xs px-3" @click.stop="aiAnalyzePlan(plan)" :disabled="ai.loading">
+                    <Loader2 v-if="ai.loading && aiPlanId === plan.id" class="w-3.5 h-3.5 animate-spin" />
+                    <Sparkles v-else class="w-3.5 h-3.5 text-primary" />AI 建议
                   </Button>
+                  <div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                   <!-- Status transitions -->
                   <select
                     v-if="plan.status !== 'completed' && plan.status !== 'cancelled'"
@@ -564,6 +565,7 @@ watch(() => accountStore.currentAccount, async (acc) => {
                       </AlertDialogFooter>
                     </AlertDialogContent>
                   </AlertDialog>
+                  </div>
                 </div>
               </div>
             </div>

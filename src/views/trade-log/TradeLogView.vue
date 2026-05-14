@@ -273,13 +273,14 @@ watch(() => accountStore.currentAccount, async (acc) => { if (acc) await logStor
                     {{ log.status === 'open' ? '持仓中' : '已平仓' }}
                   </span>
                 </div>
-                <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Button v-if="log.status === 'closed'" variant="ghost" size="sm" class="h-6 gap-1 text-[10px] px-2" @click.stop="aiAnalyzeLog(log)" :disabled="ai.loading">
-                    <Loader2 v-if="ai.loading && aiLogId === log.id" class="w-3 h-3 animate-spin" />
-                    <Sparkles v-else class="w-3 h-3" />AI 点评
+                <div class="flex items-center gap-1">
+                  <Button v-if="log.status === 'closed'" variant="outline" size="sm" class="h-8 gap-1.5 text-xs px-3" @click.stop="aiAnalyzeLog(log)" :disabled="ai.loading">
+                    <Loader2 v-if="ai.loading && aiLogId === log.id" class="w-3.5 h-3.5 animate-spin" />
+                    <Sparkles v-else class="w-3.5 h-3.5 text-primary" />AI 点评
                   </Button>
-                  <Button v-if="log.status === 'open'" variant="outline" size="sm" class="h-6 text-[10px] px-2"
+                  <Button v-if="log.status === 'open'" variant="outline" size="sm" class="h-8 text-xs px-3"
                     @click.stop="handleClosePosition(log)">平仓</Button>
+                  <div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                   <Button variant="ghost" size="icon" class="h-7 w-7" @click.stop="openEditForm(log)"><Pencil class="w-3.5 h-3.5" /></Button>
                   <AlertDialog>
                     <AlertDialogTrigger as-child>
@@ -296,6 +297,7 @@ watch(() => accountStore.currentAccount, async (acc) => { if (acc) await logStor
                       </AlertDialogFooter>
                     </AlertDialogContent>
                   </AlertDialog>
+                  </div>
                 </div>
               </div>
             </div>

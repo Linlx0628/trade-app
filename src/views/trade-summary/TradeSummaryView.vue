@@ -197,12 +197,13 @@ watch(() => accountStore.currentAccount, async (acc) => { if (acc) await summary
                   <CardDescription class="mt-0.5">{{ typeLabel(s.summary_type) }}</CardDescription>
                 </div>
               </div>
-              <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                <Button variant="ghost" size="sm" class="h-7 gap-1 text-xs px-2" @click.stop="aiAnalyzeSummary(s)" :disabled="ai.loading">
-                  <Loader2 v-if="ai.loading && aiResultFor === s.id" class="w-3 h-3 animate-spin" />
-                  <Sparkles v-else class="w-3 h-3" />AI 复盘
+              <div class="flex items-center gap-1">
+                <Button variant="outline" size="sm" class="h-8 gap-1.5 text-xs px-3" @click.stop="aiAnalyzeSummary(s)" :disabled="ai.loading">
+                  <Loader2 v-if="ai.loading && aiResultFor === s.id" class="w-3.5 h-3.5 animate-spin" />
+                  <Sparkles v-else class="w-3.5 h-3.5 text-primary" />AI 复盘
                 </Button>
-                <Button variant="ghost" size="icon" class="h-7 w-7" @click.stop="openEditForm(s)"><Pencil class="w-3.5 h-3.5" /></Button>
+                <div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Button variant="ghost" size="icon" class="h-7 w-7" @click.stop="openEditForm(s)"><Pencil class="w-3.5 h-3.5" /></Button>
                 <AlertDialog>
                   <AlertDialogTrigger as-child>
                     <Button variant="ghost" size="icon" class="h-7 w-7 hover:text-loss" @click.stop="deleteTarget = s"><Trash2 class="w-3.5 h-3.5" /></Button>
@@ -218,6 +219,7 @@ watch(() => accountStore.currentAccount, async (acc) => { if (acc) await summary
                     </AlertDialogFooter>
                   </AlertDialogContent>
                 </AlertDialog>
+                </div>
               </div>
             </div>
           </CardHeader>
