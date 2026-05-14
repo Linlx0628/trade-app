@@ -53,3 +53,51 @@
     -moz-osx-font-smoothing: grayscale;
   }
 }
+
+@layer components {
+  .ai-content {
+    h1, h2, h3, h4 {
+      font-weight: 600;
+      margin-top: 0.75em;
+      margin-bottom: 0.25em;
+      color: var(--color-foreground);
+    }
+    h3 { font-size: 0.8rem; }
+    h4 { font-size: 0.75rem; }
+    ul, ol {
+      padding-left: 1.25em;
+      margin: 0.4em 0;
+    }
+    li {
+      margin: 0.15em 0;
+    }
+    ul li {
+      list-style-type: disc;
+    }
+    ol li {
+      list-style-type: decimal;
+    }
+    strong {
+      font-weight: 600;
+      color: var(--color-foreground);
+    }
+    em {
+      font-style: italic;
+    }
+    p {
+      margin: 0.3em 0;
+    }
+    code {
+      background: var(--color-secondary);
+      padding: 0.1em 0.3em;
+      border-radius: 0.25em;
+      font-size: 0.85em;
+    }
+    blockquote {
+      border-left: 3px solid var(--color-primary);
+      padding-left: 0.75em;
+      margin: 0.5em 0;
+      color: var(--color-muted-foreground);
+    }
+  }
+}

@@ -44,6 +44,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { cn } from '@/lib/utils'
 import { useAi } from '@/composables/useAi'
+import { renderMarkdown } from '@/lib/markdown'
 import type { TradePlan, TradeDirection, TradePlanStatus, MarketType } from '@/types/common'
 
 const tradePlanStore = useTradePlanStore()
@@ -589,7 +590,7 @@ watch(() => accountStore.currentAccount, async (acc) => {
                 <Loader2 v-if="aiLoading" class="w-3 h-3 animate-spin text-primary ml-auto" />
               </div>
               <div v-if="aiLoading" class="text-xs text-muted-foreground">正在分析中...</div>
-              <p v-else class="text-xs text-foreground/80 whitespace-pre-wrap leading-relaxed">{{ aiResult }}</p>
+              <div v-else class="text-xs text-foreground/80 leading-relaxed ai-content prose prose-sm max-w-none" v-html="renderMarkdown(aiResult)" />
             </div>
           </CardContent>
         </Card>

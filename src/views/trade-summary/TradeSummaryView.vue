@@ -8,6 +8,7 @@ import { useTradeSummaryStore } from '@/stores/trade-summary'
 import { useAccountStore } from '@/stores/account'
 import { useToast } from '@/components/ui/toast'
 import { useAi } from '@/composables/useAi'
+import { renderMarkdown } from '@/lib/markdown'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
@@ -286,7 +287,7 @@ watch(() => accountStore.currentAccount, async (acc) => { if (acc) await summary
                 <Loader2 v-if="aiLoading" class="w-3 h-3 animate-spin text-primary ml-auto" />
               </div>
               <div v-if="aiLoading" class="text-xs text-muted-foreground">正在分析中...</div>
-              <p v-else class="text-xs text-foreground/80 whitespace-pre-wrap leading-relaxed">{{ aiResult }}</p>
+              <div v-else class="text-xs text-foreground/80 leading-relaxed ai-content prose prose-sm max-w-none" v-html="renderMarkdown(aiResult)" />
             </div>
           </CardContent>
         </Card>

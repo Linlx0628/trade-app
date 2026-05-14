@@ -20,7 +20,7 @@ const router = useRouter()
 const appStore = useAppStore()
 
 const pageTitle = computed(() => {
-  return (route.meta.title as string) || '交易管理系统'
+  return (route.meta.title as string) || '策盈 TradeMind'
 })
 
 const navItems = [
@@ -71,7 +71,7 @@ function navigateTo(path: string) {
               v-if="!appStore.sidebarCollapsed"
               class="text-base font-semibold text-sidebar-foreground whitespace-nowrap tracking-tight"
             >
-              TradePro
+              策盈
             </span>
           </Transition>
         </div>

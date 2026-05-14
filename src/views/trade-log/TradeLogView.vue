@@ -8,7 +8,8 @@ import { useTradeLogStore } from '@/stores/trade-log'
 import { useAccountStore } from '@/stores/account'
 import { useToast } from '@/components/ui/toast'
 import { useAi } from '@/composables/useAi'
-import { Card, CardContent } from '@/components/ui/card'
+import { renderMarkdown } from '@/lib/markdown'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -317,7 +318,7 @@ watch(() => accountStore.currentAccount, async (acc) => { if (acc) await logStor
                 <Loader2 v-if="aiLoading" class="w-3 h-3 animate-spin text-primary ml-auto" />
               </div>
               <div v-if="aiLoading" class="text-xs text-muted-foreground">正在分析中...</div>
-              <p v-else class="text-xs text-foreground/80 whitespace-pre-wrap leading-relaxed">{{ aiResult }}</p>
+              <div v-else class="text-xs text-foreground/80 leading-relaxed ai-content prose prose-sm max-w-none" v-html="renderMarkdown(aiResult)" />
             </div>
           </CardContent>
         </Card>
@@ -335,7 +336,10 @@ watch(() => accountStore.currentAccount, async (acc) => { if (acc) await logStor
             <div class="flex items-center justify-between">
               <div class="flex items-center gap-3">
                 <div class="flex items-center justify-center w-9 h-9 rounded-lg bg-primary/10"><BookOpen class="w-4 h-4 text-primary" /></div>
-                <div><CardTitle class="text-base">{{ isEditing ? '编辑交易日志' : '新建交易日志' }}</CardTitle></div>
+                <div>
+                  <CardTitle class="text-base">{{ isEditing ? '编辑交易日志' : '新建交易日志' }}</CardTitle>
+                  <CardDescription class="mt-0.5">{{ isEditing ? '修改交易记录详情' : '记录交易执行情况' }}</CardDescription>
+                </div>
               </div>
               <Button variant="ghost" size="icon" class="h-8 w-8" @click="closeForm"><X class="w-4 h-4" /></Button>
             </div>
