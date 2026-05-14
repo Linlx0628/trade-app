@@ -20,6 +20,8 @@ import {
   PlayCircle,
   Tag,
   Sparkles,
+  Save,
+  LayoutTemplate,
 } from 'lucide-vue-next'
 import { useTradePlanStore } from '@/stores/trade-plan'
 import { useAccountStore } from '@/stores/account'
@@ -45,6 +47,8 @@ import {
 import { cn } from '@/lib/utils'
 import { useAi } from '@/composables/useAi'
 import { renderMarkdown } from '@/lib/markdown'
+import TemplateSelector from './components/TemplateSelector.vue'
+import TemplateSaveDialog from './components/TemplateSaveDialog.vue'
 import type { TradePlan, TradeDirection, TradePlanStatus, MarketType } from '@/types/common'
 
 const tradePlanStore = useTradePlanStore()
@@ -144,6 +148,7 @@ function resetForm() {
 
 function openCreateForm() {
   resetForm()
+  selectedTemplate.value = null
   showForm.value = true
 }
 
@@ -172,6 +177,7 @@ function openEditForm(plan: TradePlan) {
 function closeForm() {
   showForm.value = false
   resetForm()
+  selectedTemplate.value = null
 }
 
 function nextStep() {
@@ -181,6 +187,13 @@ function nextStep() {
   }
   if (currentStep.value < steps.length - 1) {
     currentStep.value++
+    // Auto-calculate stop loss/take profit from template
+    if (currentStep.value === 1 && selectedTemplate.value && form.entry_price > 0) {
+      const t = selectedTemplate.value
+      const dir = t.direction === 'long' ? 1 : -1
+      form.stop_loss = +(form.entry_price - form.entry_price * t.stop_loss_ratio * dir).toFixed(2)
+      form.take_profit = +(form.entry_price + form.entry_price * t.take_profit_ratio * dir).toFixed(2)
+    }
   }
 }
 
@@ -335,6 +348,42 @@ function parseTags(tagsStr: string): string[] {
   }
 }
 
+// --- Template ---
+const showTemplateSelector = ref(false)
+const showTemplateSave = ref(false)
+const templateSaveTarget = ref<TradePlan | null>(null)
+
+function openTemplateSelector() { showTemplateSelector.value = true }
+function closeTemplateSelector() { showTemplateSelector.value = false }
+
+async function handleTemplateSelect(template: import('@/types/common').TradeTemplate) {
+  closeTemplateSelector()
+  // Open the create form and fill with template data
+  resetForm()
+  form.symbol = template.symbol
+  form.direction = template.direction as TradeDirection
+  form.market_type = template.market_type as MarketType
+  form.strategy = template.strategy
+  form.lots = template.default_lots
+  form.notes = template.notes
+  try { form.tagsInput = JSON.parse(template.tags || '[]').join(', ') } catch { form.tagsInput = '' }
+  // Store template info for price calculation
+  selectedTemplate.value = template
+  showForm.value = true
+}
+
+const selectedTemplate = ref<import('@/types/common').TradeTemplate | null>(null)
+
+function openSaveAsTemplate(plan: TradePlan) {
+  templateSaveTarget.value = plan
+  showTemplateSave.value = true
+}
+
+function onTemplateSaved() {
+  showTemplateSave.value = false
+  templateSaveTarget.value = null
+}
+
 // --- AI Strategy ---
 const { loading: aiLoading, result: aiResult, analyze: aiAnalyze, getConfig: aiGetConfig } = useAi()
 const aiPlanId = ref<string | null>(null)
@@ -380,10 +429,16 @@ watch(() => accountStore.currentAccount, async (acc) => {
         <h2 class="text-lg font-semibold text-foreground tracking-tight">交易计划</h2>
         <p class="text-sm text-muted-foreground mt-0.5">制定和管理您的交易计划，严格执行风险管理</p>
       </div>
-      <Button size="sm" class="gap-2" :disabled="!currentAccount" @click="openCreateForm">
-        <Plus class="w-4 h-4" />
-        新建计划
-      </Button>
+      <div class="flex items-center gap-2">
+        <Button variant="outline" size="sm" class="gap-2" :disabled="!currentAccount" @click="openTemplateSelector">
+          <LayoutTemplate class="w-4 h-4" />
+          从模板创建
+        </Button>
+        <Button size="sm" class="gap-2" :disabled="!currentAccount" @click="openCreateForm">
+          <Plus class="w-4 h-4" />
+          新建计划
+        </Button>
+      </div>
     </div>
 
     <!-- No account hint -->
@@ -530,6 +585,9 @@ watch(() => accountStore.currentAccount, async (acc) => {
                   <Button variant="outline" size="sm" class="h-8 gap-1.5 text-xs px-3" @click.stop="aiAnalyzePlan(plan)" :disabled="aiLoading">
                     <Loader2 v-if="aiLoading && aiPlanId === plan.id" class="w-3.5 h-3.5 animate-spin" />
                     <Sparkles v-else class="w-3.5 h-3.5 text-primary" />AI 建议
+                  </Button>
+                  <Button variant="ghost" size="sm" class="h-8 gap-1 text-xs px-2" @click.stop="openSaveAsTemplate(plan)" title="保存为模板">
+                    <Save class="w-3.5 h-3.5" />
                   </Button>
                   <div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                   <!-- Status transitions -->
@@ -945,5 +1003,20 @@ watch(() => accountStore.currentAccount, async (acc) => {
         </Card>
       </div>
     </Transition>
+
+    <!-- Template Selector -->
+    <TemplateSelector
+      v-if="showTemplateSelector"
+      @select="handleTemplateSelect"
+      @close="closeTemplateSelector"
+    />
+
+    <!-- Template Save Dialog -->
+    <TemplateSaveDialog
+      v-if="showTemplateSave && templateSaveTarget"
+      :plan="templateSaveTarget"
+      @close="showTemplateSave = false; templateSaveTarget = null"
+      @saved="onTemplateSaved"
+    />
   </div>
 </template>
