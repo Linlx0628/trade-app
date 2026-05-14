@@ -128,3 +128,41 @@ export const dataIoApi = {
   createBackup: (backupDir: string) =>
     tauriCommand<string>('create_backup', { backupDir }),
 }
+
+// Dashboard API
+export interface DashboardStats {
+  balance: number
+  today_pnl: number
+  total_pnl: number
+  total_trades: number
+  win_trades: number
+  loss_trades: number
+  win_rate: number
+  month_trades: number
+  month_pnl: number
+  open_positions: number
+  pending_plans: number
+}
+
+export interface PnlTrend {
+  date: string
+  pnl: number
+  cumulative_pnl: number
+}
+
+export interface SymbolPnl {
+  symbol: string
+  name: string
+  trade_count: number
+  total_pnl: number
+  win_rate: number
+}
+
+export const dashboardApi = {
+  getStats: (accountId: string) =>
+    tauriCommand<DashboardStats>('get_dashboard_stats', { accountId }),
+  getPnlTrend: (accountId: string, days?: number) =>
+    tauriCommand<PnlTrend[]>('get_pnl_trend', { accountId, days: days || null }),
+  getSymbolPnl: (accountId: string) =>
+    tauriCommand<SymbolPnl[]>('get_symbol_pnl', { accountId }),
+}

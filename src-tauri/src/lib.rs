@@ -77,6 +77,10 @@ pub fn run() {
             commands::data_io::preview_import_csv,
             commands::data_io::import_trade_logs_csv,
             commands::data_io::create_backup,
+            // 仪表盘
+            commands::dashboard::get_dashboard_stats,
+            commands::dashboard::get_pnl_trend,
+            commands::dashboard::get_symbol_pnl,
         ])
         .run(tauri::generate_context!())
         .expect("运行 Tauri 应用时出错");
