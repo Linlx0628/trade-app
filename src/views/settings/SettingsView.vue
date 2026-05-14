@@ -14,6 +14,8 @@ import {
   Coins,
   Percent,
   Banknote,
+  Sparkles,
+  Save,
 } from 'lucide-vue-next'
 import { useAccountStore } from '@/stores/account'
 import { useToast } from '@/components/ui/toast'
@@ -23,6 +25,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
+import { SelectNative } from '@/components/ui/select'
 import {
   AlertDialog,
   AlertDialogTrigger,
@@ -207,7 +210,31 @@ onMounted(async () => {
   if (!accountStore.currentAccount && accountStore.accounts.length > 0) {
     await accountStore.selectAccount(accountStore.accounts[0].id)
   }
+  // Load AI config from localStorage
+  const saved = localStorage.getItem('ai_config')
+  if (saved) {
+    try { Object.assign(aiConfig, JSON.parse(saved)) } catch {}
+  }
 })
+
+// --- AI Config ---
+import type { AiConfig } from '@/types/common'
+
+const aiConfig = reactive<AiConfig>({
+  provider: 'anthropic',
+  api_key: '',
+  model: '',
+  base_url: '',
+})
+const aiSaving = ref(false)
+
+async function saveAiConfig() {
+  aiSaving.value = true
+  localStorage.setItem('ai_config', JSON.stringify(aiConfig))
+  await new Promise(r => setTimeout(r, 300))
+  aiSaving.value = false
+  toast({ title: 'AI 配置已保存', variant: 'success' })
+}
 </script>
 
 <template>
@@ -603,6 +630,51 @@ onMounted(async () => {
               &yen;{{ formatCurrency(accountStore.currentAccountStats.balance) }}
             </p>
           </div>
+        </div>
+      </CardContent>
+    </Card>
+
+    <!-- AI Configuration -->
+    <Card class="mt-2">
+      <CardHeader class="pb-4">
+        <div class="flex items-center gap-3">
+          <div class="flex items-center justify-center w-9 h-9 rounded-lg bg-primary/10">
+            <Sparkles class="w-4 h-4 text-primary" />
+          </div>
+          <div>
+            <CardTitle class="text-base">AI 助手配置</CardTitle>
+            <CardDescription class="mt-0.5">配置 AI 接口以获取智能交易分析和复盘建议</CardDescription>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div class="space-y-4 max-w-lg">
+          <div class="grid grid-cols-2 gap-4">
+            <div class="space-y-2">
+              <Label class="text-sm font-medium">AI 提供商</Label>
+              <SelectNative v-model="aiConfig.provider">
+                <option value="anthropic">Anthropic (Claude)</option>
+                <option value="openai">OpenAI (GPT)</option>
+              </SelectNative>
+            </div>
+            <div class="space-y-2">
+              <Label class="text-sm font-medium">模型</Label>
+              <Input v-model="aiConfig.model" :placeholder="aiConfig.provider === 'anthropic' ? 'claude-sonnet-4-20250514' : 'gpt-4o'" />
+            </div>
+          </div>
+          <div class="space-y-2">
+            <Label class="text-sm font-medium">API Key</Label>
+            <Input v-model="aiConfig.api_key" type="password" placeholder="sk-..." />
+          </div>
+          <div class="space-y-2">
+            <Label class="text-sm font-medium">自定义 API 地址（可选）</Label>
+            <Input v-model="aiConfig.base_url" placeholder="留空使用默认地址" />
+          </div>
+          <Button size="sm" class="gap-2" :disabled="aiSaving" @click="saveAiConfig">
+            <Loader2 v-if="aiSaving" class="w-4 h-4 animate-spin" />
+            <Save v-else class="w-4 h-4" />
+            保存配置
+          </Button>
         </div>
       </CardContent>
     </Card>

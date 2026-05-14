@@ -61,6 +61,8 @@ pub fn run() {
             commands::trade_summary::create_trade_summary,
             commands::trade_summary::update_trade_summary,
             commands::trade_summary::delete_trade_summary,
+            // AI
+            commands::ai::ai_chat,
         ])
         .run(tauri::generate_context!())
         .expect("运行 Tauri 应用时出错");

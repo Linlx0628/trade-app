@@ -240,3 +240,30 @@ export interface UpdateTradeSummaryDto {
   improvement?: string
   tags?: string[]
 }
+
+// --- AI ---
+
+export interface AiConfig {
+  provider: 'anthropic' | 'openai'
+  api_key: string
+  model: string
+  base_url: string
+}
+
+export interface AiMessage {
+  role: 'system' | 'user' | 'assistant'
+  content: string
+}
+
+export interface AiChatRequest {
+  config: AiConfig
+  messages: AiMessage[]
+  temperature?: number
+  max_tokens?: number
+}
+
+export interface AiChatResponse {
+  content: string
+  model: string
+  usage: { prompt_tokens: number; completion_tokens: number }
+}

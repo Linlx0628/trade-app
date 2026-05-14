@@ -14,6 +14,8 @@ import type {
   TradeSummary,
   CreateTradeSummaryDto,
   UpdateTradeSummaryDto,
+  AiChatRequest,
+  AiChatResponse,
 } from '@/types/common'
 
 export async function tauriCommand<T>(command: string, args?: Record<string, unknown>): Promise<T> {
@@ -70,4 +72,9 @@ export const tradeSummaryApi = {
   create: (dto: CreateTradeSummaryDto) => tauriCommand<TradeSummary>('create_trade_summary', { dto }),
   update: (dto: UpdateTradeSummaryDto) => tauriCommand<TradeSummary>('update_trade_summary', { dto }),
   delete: (id: string) => tauriCommand<void>('delete_trade_summary', { id }),
+}
+
+// AI API
+export const aiApi = {
+  chat: (req: AiChatRequest) => tauriCommand<AiChatResponse>('ai_chat', { req }),
 }
