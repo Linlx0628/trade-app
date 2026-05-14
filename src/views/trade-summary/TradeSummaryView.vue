@@ -118,12 +118,18 @@ const ai = useAi()
 const aiResultFor = ref<string | null>(null)
 
 async function aiAnalyzeSummary(s: TradeSummary) {
+  if (!ai.getConfig()) {
+    toast({ title: '请先配置 AI', description: '前往设置页面填写 API Key', variant: 'destructive' })
+    return
+  }
   aiResultFor.value = s.id
-  await ai.analyze([
+  const err = await ai.analyze([
     { role: 'system', content: '你是一位专业的交易复盘分析师。基于交易统计数据，提供简洁实用的复盘建议，包括：1) 交易表现评价 2) 风险管理建议 3) 可改进之处 4) 下一步行动计划。回复用中文，不超过500字。' },
     { role: 'user', content: `请分析以下${typeLabel(s.summary_type)}交易数据（日期: ${s.summary_date}）：\n总交易: ${s.total_trades}笔 (${s.win_trades}胜/${s.loss_trades}负)\n胜率: ${(s.win_rate * 100).toFixed(1)}%\n净盈亏: ${s.net_pnl >= 0 ? '+' : ''}${s.net_pnl.toFixed(0)}元\n盈亏比: ${s.profit_factor.toFixed(2)}\n最大盈利: ${s.max_profit.toFixed(0)}元 / 最大亏损: ${s.max_loss.toFixed(0)}元\n平均盈利: ${s.avg_profit.toFixed(0)}元 / 平均亏损: ${s.avg_loss.toFixed(0)}元\n情绪评分: ${s.emotion_score}/10` },
   ])
-  if (ai.error.value) toast({ title: 'AI 分析失败', description: ai.error.value, variant: 'destructive' })
+  if (err && !ai.result.value) {
+    toast({ title: 'AI 分析失败', description: String(err), variant: 'destructive' })
+  }
 }
 
 function parseTags(s: string): string[] { try { return JSON.parse(s || '[]') } catch { return [] } }

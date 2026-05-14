@@ -339,12 +339,18 @@ const ai = useAi()
 const aiPlanId = ref<string | null>(null)
 
 async function aiAnalyzePlan(plan: TradePlan) {
+  if (!ai.getConfig()) {
+    toast({ title: '请先配置 AI', description: '前往设置页面填写 API Key', variant: 'destructive' })
+    return
+  }
   aiPlanId.value = plan.id
-  await ai.analyze([
+  const err = await ai.analyze([
     { role: 'system', content: '你是一位专业的期货/股票交易策略顾问。基于交易计划参数，提供简洁的风险评估和策略建议，包括：1) 风险评估 2) 入场时机分析 3) 盈亏比评价 4) 关键注意事项。回复用中文，不超过400字。' },
     { role: 'user', content: `请分析以下交易计划：\n品种: ${plan.symbol} (${plan.name || plan.symbol})\n方向: ${plan.direction === 'long' ? '做多' : '做空'}\n入场: ${plan.entry_price} / 止损: ${plan.stop_loss} / 止盈: ${plan.take_profit}\n手数: ${plan.lots}\n市场: ${plan.market_type === 'futures' ? '期货' : '股票'}\n策略: ${plan.strategy || '未填写'}` },
   ])
-  if (ai.error.value) toast({ title: 'AI 分析失败', description: ai.error.value, variant: 'destructive' })
+  if (err && !ai.result.value) {
+    toast({ title: 'AI 分析失败', description: String(err), variant: 'destructive' })
+  }
 }
 
 // --- Lifecycle ---

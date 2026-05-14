@@ -150,12 +150,18 @@ const ai = useAi()
 const aiLogId = ref<string | null>(null)
 
 async function aiAnalyzeLog(log: TradeLog) {
+  if (!ai.getConfig()) {
+    toast({ title: '请先配置 AI', description: '前往设置页面填写 API Key', variant: 'destructive' })
+    return
+  }
   aiLogId.value = log.id
-  await ai.analyze([
+  const err = await ai.analyze([
     { role: 'system', content: '你是一位专业的交易心理和执行分析师。基于单笔交易数据，提供简洁的交易点评，包括：1) 执行评价 2) 盈亏分析 3) 心理状态评估 4) 改进建议。回复用中文，不超过300字。' },
     { role: 'user', content: `请点评以下交易：\n品种: ${log.symbol} (${log.name || log.symbol})\n方向: ${log.direction === 'long' ? '做多' : '做空'}\n入场: ${log.entry_price} / 出场: ${log.exit_price || '未平仓'}\n盈亏: ${log.pnl >= 0 ? '+' : ''}${log.pnl.toFixed(0)}元\n信心指数: ${log.confidence}/10` },
   ])
-  if (ai.error.value) toast({ title: 'AI 分析失败', description: ai.error.value, variant: 'destructive' })
+  if (err && !ai.result.value) {
+    toast({ title: 'AI 分析失败', description: String(err), variant: 'destructive' })
+  }
 }
 
 onMounted(async () => {

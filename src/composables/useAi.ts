@@ -19,11 +19,11 @@ export function useAi() {
     }
   }
 
-  async function analyze(messages: AiMessage[]) {
+  async function analyze(messages: AiMessage[]): Promise<string | null> {
     const config = getConfig()
     if (!config) {
-      error.value = '请先在设置页面配置 AI'
-      return null
+      error.value = '请先在设置页面配置 AI（需要填写 API Key）'
+      return error.value
     }
 
     loading.value = true
@@ -35,8 +35,9 @@ export function useAi() {
       result.value = resp.content
       return resp.content
     } catch (e: unknown) {
-      error.value = e instanceof Error ? e.message : String(e)
-      return null
+      const msg = e instanceof Error ? e.message : String(e)
+      error.value = msg
+      return msg
     } finally {
       loading.value = false
     }
