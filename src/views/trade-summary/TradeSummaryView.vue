@@ -2,11 +2,12 @@
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import {
   Plus, StickyNote, Loader2, Trash2, Pencil, X,
-  TrendingUp, TrendingDown, BarChart3, Calendar, Tag,
+  TrendingUp, TrendingDown, BarChart3, Calendar, Tag, Sparkles,
 } from 'lucide-vue-next'
 import { useTradeSummaryStore } from '@/stores/trade-summary'
 import { useAccountStore } from '@/stores/account'
 import { useToast } from '@/components/ui/toast'
+import { useAi } from '@/composables/useAi'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
@@ -112,6 +113,19 @@ async function handleDelete() {
 
 function typeLabel(t: string) { return t === 'daily' ? '日总结' : t === 'weekly' ? '周总结' : '月总结' }
 
+// --- AI Analysis ---
+const ai = useAi()
+const aiResultFor = ref<string | null>(null)
+
+async function aiAnalyzeSummary(s: TradeSummary) {
+  aiResultFor.value = s.id
+  await ai.analyze([
+    { role: 'system', content: '你是一位专业的交易复盘分析师。基于交易统计数据，提供简洁实用的复盘建议，包括：1) 交易表现评价 2) 风险管理建议 3) 可改进之处 4) 下一步行动计划。回复用中文，不超过500字。' },
+    { role: 'user', content: `请分析以下${typeLabel(s.summary_type)}交易数据（日期: ${s.summary_date}）：\n总交易: ${s.total_trades}笔 (${s.win_trades}胜/${s.loss_trades}负)\n胜率: ${(s.win_rate * 100).toFixed(1)}%\n净盈亏: ${s.net_pnl >= 0 ? '+' : ''}${s.net_pnl.toFixed(0)}元\n盈亏比: ${s.profit_factor.toFixed(2)}\n最大盈利: ${s.max_profit.toFixed(0)}元 / 最大亏损: ${s.max_loss.toFixed(0)}元\n平均盈利: ${s.avg_profit.toFixed(0)}元 / 平均亏损: ${s.avg_loss.toFixed(0)}元\n情绪评分: ${s.emotion_score}/10` },
+  ])
+  if (ai.error.value) toast({ title: 'AI 分析失败', description: ai.error.value, variant: 'destructive' })
+}
+
 function parseTags(s: string): string[] { try { return JSON.parse(s || '[]') } catch { return [] } }
 
 onMounted(async () => {
@@ -184,6 +198,10 @@ watch(() => accountStore.currentAccount, async (acc) => { if (acc) await summary
                 </div>
               </div>
               <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <Button variant="ghost" size="sm" class="h-7 gap-1 text-xs px-2" @click.stop="aiAnalyzeSummary(s)" :disabled="ai.loading">
+                  <Loader2 v-if="ai.loading && aiResultFor === s.id" class="w-3 h-3 animate-spin" />
+                  <Sparkles v-else class="w-3 h-3" />AI 复盘
+                </Button>
                 <Button variant="ghost" size="icon" class="h-7 w-7" @click.stop="openEditForm(s)"><Pencil class="w-3.5 h-3.5" /></Button>
                 <AlertDialog>
                   <AlertDialogTrigger as-child>
@@ -250,6 +268,17 @@ watch(() => accountStore.currentAccount, async (acc) => { if (acc) await summary
               <Badge v-for="tag in parseTags(s.tags)" :key="tag" variant="secondary" class="text-[10px] h-5 px-1.5 gap-1">
                 <Tag class="w-2.5 h-2.5" />{{ tag }}
               </Badge>
+            </div>
+
+            <!-- AI Analysis Result -->
+            <div v-if="aiResultFor === s.id && (ai.loading || ai.result)" class="mt-3 pt-3 border-t border-primary/20 rounded-lg bg-primary/5 p-3">
+              <div class="flex items-center gap-1.5 mb-2">
+                <Sparkles class="w-3.5 h-3.5 text-primary" />
+                <span class="text-xs font-medium text-primary">AI 复盘分析</span>
+                <Loader2 v-if="ai.loading" class="w-3 h-3 animate-spin text-primary ml-auto" />
+              </div>
+              <div v-if="ai.loading" class="text-xs text-muted-foreground">正在分析中...</div>
+              <p v-else class="text-xs text-foreground/80 whitespace-pre-wrap leading-relaxed">{{ ai.result }}</p>
             </div>
           </CardContent>
         </Card>
