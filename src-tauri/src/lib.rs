@@ -48,6 +48,18 @@ pub fn run() {
             commands::trade_plan::create_trade_plan,
             commands::trade_plan::update_trade_plan,
             commands::trade_plan::delete_trade_plan,
+            // 交易日志
+            commands::trade_log::get_trade_logs,
+            commands::trade_log::get_trade_log,
+            commands::trade_log::create_trade_log,
+            commands::trade_log::update_trade_log,
+            commands::trade_log::delete_trade_log,
+            // 交易总结
+            commands::trade_summary::get_trade_summaries,
+            commands::trade_summary::get_trade_summary,
+            commands::trade_summary::create_trade_summary,
+            commands::trade_summary::update_trade_summary,
+            commands::trade_summary::delete_trade_summary,
         ])
         .run(tauri::generate_context!())
         .expect("运行 Tauri 应用时出错");

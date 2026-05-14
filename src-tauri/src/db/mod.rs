@@ -3,7 +3,9 @@
 //! 负责数据库连接初始化、迁移管理
 
 pub mod account_repo;
+pub mod trade_log_repo;
 pub mod trade_plan_repo;
+pub mod trade_summary_repo;
 
 use rusqlite::Connection;
 use std::sync::Mutex;

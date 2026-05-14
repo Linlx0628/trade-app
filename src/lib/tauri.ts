@@ -8,6 +8,12 @@ import type {
   TradePlan,
   CreateTradePlanDto,
   UpdateTradePlanDto,
+  TradeLog,
+  CreateTradeLogDto,
+  UpdateTradeLogDto,
+  TradeSummary,
+  CreateTradeSummaryDto,
+  UpdateTradeSummaryDto,
 } from '@/types/common'
 
 export async function tauriCommand<T>(command: string, args?: Record<string, unknown>): Promise<T> {
@@ -42,4 +48,24 @@ export const tradePlanApi = {
   create: (dto: CreateTradePlanDto) => tauriCommand<TradePlan>('create_trade_plan', { dto }),
   update: (dto: UpdateTradePlanDto) => tauriCommand<TradePlan>('update_trade_plan', { dto }),
   delete: (id: string) => tauriCommand<void>('delete_trade_plan', { id }),
+}
+
+// Trade Log API
+export const tradeLogApi = {
+  getAll: (accountId: string, status?: string) =>
+    tauriCommand<TradeLog[]>('get_trade_logs', { accountId, status: status || null }),
+  getById: (id: string) => tauriCommand<TradeLog>('get_trade_log', { id }),
+  create: (dto: CreateTradeLogDto) => tauriCommand<TradeLog>('create_trade_log', { dto }),
+  update: (dto: UpdateTradeLogDto) => tauriCommand<TradeLog>('update_trade_log', { dto }),
+  delete: (id: string) => tauriCommand<void>('delete_trade_log', { id }),
+}
+
+// Trade Summary API
+export const tradeSummaryApi = {
+  getAll: (accountId: string, summaryType?: string) =>
+    tauriCommand<TradeSummary[]>('get_trade_summaries', { accountId, summaryType: summaryType || null }),
+  getById: (id: string) => tauriCommand<TradeSummary>('get_trade_summary', { id }),
+  create: (dto: CreateTradeSummaryDto) => tauriCommand<TradeSummary>('create_trade_summary', { dto }),
+  update: (dto: UpdateTradeSummaryDto) => tauriCommand<TradeSummary>('update_trade_summary', { dto }),
+  delete: (id: string) => tauriCommand<void>('delete_trade_summary', { id }),
 }
