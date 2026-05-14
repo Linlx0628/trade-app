@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   LayoutDashboard,
@@ -10,14 +10,17 @@ import {
   PanelLeftClose,
   PanelLeft,
   TrendingUp,
+  Search,
 } from 'lucide-vue-next'
 import { useAppStore } from '@/stores/app'
 import { Separator } from '@/components/ui/separator'
 import { cn } from '@/lib/utils'
+import GlobalSearchDialog from './GlobalSearchDialog.vue'
 
 const route = useRoute()
 const router = useRouter()
 const appStore = useAppStore()
+const showSearch = ref(false)
 
 const pageTitle = computed(() => {
   return (route.meta.title as string) || '策盈 TradeMind'
@@ -33,6 +36,19 @@ const navItems = [
 const bottomNavItems = [
   { name: '设置', path: '/settings', icon: Settings },
 ]
+
+function handleGlobalKeydown(e: KeyboardEvent) {
+  const mod = e.metaKey || e.ctrlKey
+  if (mod && e.key === 'k') { e.preventDefault(); showSearch.value = true }
+  else if (mod && e.key === '1') { e.preventDefault(); router.push('/') }
+  else if (mod && e.key === '2') { e.preventDefault(); router.push('/trade-plan') }
+  else if (mod && e.key === '3') { e.preventDefault(); router.push('/trade-log') }
+  else if (mod && e.key === '4') { e.preventDefault(); router.push('/trade-summary') }
+  else if (mod && e.key === ',') { e.preventDefault(); router.push('/settings') }
+}
+
+onMounted(() => window.addEventListener('keydown', handleGlobalKeydown))
+onUnmounted(() => window.removeEventListener('keydown', handleGlobalKeydown))
 
 function isActive(path: string): boolean {
   if (path === '/') return route.path === '/'
@@ -172,6 +188,14 @@ function navigateTo(path: string) {
         </div>
         <div class="flex items-center gap-3">
           <slot name="header-actions" />
+          <button
+            class="inline-flex items-center gap-2 rounded-lg border border-border bg-secondary/50 px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors cursor-pointer"
+            @click="showSearch = true"
+          >
+            <Search class="w-3.5 h-3.5" />
+            <span>搜索</span>
+            <kbd class="text-[10px] bg-background px-1 py-0.5 rounded ml-1">⌘K</kbd>
+          </button>
         </div>
       </header>
 
@@ -180,5 +204,8 @@ function navigateTo(path: string) {
         <slot />
       </main>
     </div>
+
+    <!-- Global Search -->
+    <GlobalSearchDialog v-if="showSearch" @close="showSearch = false" />
   </div>
 </template>

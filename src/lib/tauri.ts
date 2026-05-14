@@ -166,3 +166,19 @@ export const dashboardApi = {
   getSymbolPnl: (accountId: string) =>
     tauriCommand<SymbolPnl[]>('get_symbol_pnl', { accountId }),
 }
+
+// Search API
+export interface SearchResult {
+  id: string
+  item_type: string
+  title: string
+  subtitle: string
+  symbol: string | null
+  date: string
+  match_field: string
+}
+
+export const searchApi = {
+  search: (accountId: string, query: string, limit?: number) =>
+    tauriCommand<SearchResult[]>('global_search', { accountId, query, limit: limit || null }),
+}
