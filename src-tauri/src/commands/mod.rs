@@ -2,6 +2,7 @@
 
 pub mod account;
 pub mod ai;
+pub mod data_io;
 pub mod trade_log;
 pub mod trade_plan;
 pub mod trade_summary;

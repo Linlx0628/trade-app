@@ -101,3 +101,30 @@ export const tradeTemplateApi = {
   createPlanFromTemplate: (dto: CreatePlanFromTemplateDto) =>
     tauriCommand<TradePlan>('create_plan_from_template', { dto }),
 }
+
+// Data IO API
+export interface ImportPreviewResponse {
+  headers: string[]
+  rows: string[][]
+  total_lines: number
+}
+
+export interface ImportResult {
+  total_rows: number
+  imported: number
+  skipped: number
+  errors: string[]
+}
+
+export const dataIoApi = {
+  exportTradeLogsCsv: (accountId: string, filePath: string) =>
+    tauriCommand<string>('export_trade_logs_csv', { accountId, filePath }),
+  exportTradePlansCsv: (accountId: string, filePath: string) =>
+    tauriCommand<string>('export_trade_plans_csv', { accountId, filePath }),
+  previewImportCsv: (filePath: string) =>
+    tauriCommand<ImportPreviewResponse>('preview_import_csv', { filePath }),
+  importTradeLogsCsv: (filePath: string, accountId: string) =>
+    tauriCommand<ImportResult>('import_trade_logs_csv', { filePath, accountId }),
+  createBackup: (backupDir: string) =>
+    tauriCommand<string>('create_backup', { backupDir }),
+}

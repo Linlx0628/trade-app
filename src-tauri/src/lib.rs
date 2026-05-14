@@ -71,6 +71,12 @@ pub fn run() {
             commands::trade_template::delete_trade_template,
             commands::trade_template::create_template_from_plan,
             commands::trade_template::create_plan_from_template,
+            // 数据导入导出
+            commands::data_io::export_trade_logs_csv,
+            commands::data_io::export_trade_plans_csv,
+            commands::data_io::preview_import_csv,
+            commands::data_io::import_trade_logs_csv,
+            commands::data_io::create_backup,
         ])
         .run(tauri::generate_context!())
         .expect("运行 Tauri 应用时出错");

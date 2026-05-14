@@ -16,6 +16,9 @@ import {
   Banknote,
   Sparkles,
   Save,
+  Download,
+  Upload,
+  HardDrive,
 } from 'lucide-vue-next'
 import { useAccountStore } from '@/stores/account'
 import { useToast } from '@/components/ui/toast'
@@ -234,6 +237,78 @@ async function saveAiConfig() {
   await new Promise(r => setTimeout(r, 300))
   aiSaving.value = false
   toast({ title: 'AI 配置已保存', variant: 'success' })
+}
+
+// --- Data IO ---
+const exporting = ref(false)
+const importing = ref(false)
+const backingUp = ref(false)
+
+async function handleExportLogs() {
+  const acc = accountStore.currentAccount
+  if (!acc) { toast({ title: '请先选择账户', variant: 'destructive' }); return }
+  exporting.value = true
+  try {
+    const { open } = await import('@tauri-apps/plugin-dialog')
+    const path = await open({ directory: true, multiple: false, title: '选择导出目录' })
+    if (!path) { exporting.value = false; return }
+    const dir = typeof path === 'string' ? path : path
+    const { dataIoApi } = await import('@/lib/tauri')
+    const msg = await dataIoApi.exportTradeLogsCsv(acc.id, `${dir}/交易日志_${new Date().toISOString().slice(0,10)}.csv`)
+    toast({ title: '导出成功', description: msg, variant: 'success' })
+  } catch (e: unknown) {
+    toast({ title: '导出失败', description: e instanceof Error ? e.message : String(e), variant: 'destructive' })
+  } finally { exporting.value = false }
+}
+
+async function handleExportPlans() {
+  const acc = accountStore.currentAccount
+  if (!acc) { toast({ title: '请先选择账户', variant: 'destructive' }); return }
+  exporting.value = true
+  try {
+    const { open } = await import('@tauri-apps/plugin-dialog')
+    const path = await open({ directory: true, multiple: false, title: '选择导出目录' })
+    if (!path) { exporting.value = false; return }
+    const dir = typeof path === 'string' ? path : path
+    const { dataIoApi } = await import('@/lib/tauri')
+    const msg = await dataIoApi.exportTradePlansCsv(acc.id, `${dir}/交易计划_${new Date().toISOString().slice(0,10)}.csv`)
+    toast({ title: '导出成功', description: msg, variant: 'success' })
+  } catch (e: unknown) {
+    toast({ title: '导出失败', description: e instanceof Error ? e.message : String(e), variant: 'destructive' })
+  } finally { exporting.value = false }
+}
+
+async function handleImport() {
+  const acc = accountStore.currentAccount
+  if (!acc) { toast({ title: '请先选择账户', variant: 'destructive' }); return }
+  importing.value = true
+  try {
+    const { open } = await import('@tauri-apps/plugin-dialog')
+    const selected = await open({ multiple: false, filters: [{ name: 'CSV', extensions: ['csv'] }], title: '选择CSV文件' })
+    if (!selected) { importing.value = false; return }
+    const filePath = typeof selected === 'string' ? selected : selected
+    const { dataIoApi } = await import('@/lib/tauri')
+    const result = await dataIoApi.importTradeLogsCsv(filePath, acc.id)
+    toast({ title: '导入完成', description: `成功 ${result.imported} 条，跳过 ${result.skipped} 条`, variant: result.imported > 0 ? 'success' : 'destructive' })
+    if (result.errors.length > 0) console.warn('Import errors:', result.errors)
+  } catch (e: unknown) {
+    toast({ title: '导入失败', description: e instanceof Error ? e.message : String(e), variant: 'destructive' })
+  } finally { importing.value = false }
+}
+
+async function handleBackup() {
+  backingUp.value = true
+  try {
+    const { open } = await import('@tauri-apps/plugin-dialog')
+    const path = await open({ directory: true, multiple: false, title: '选择备份目录' })
+    if (!path) { backingUp.value = false; return }
+    const dir = typeof path === 'string' ? path : path
+    const { dataIoApi } = await import('@/lib/tauri')
+    const msg = await dataIoApi.createBackup(dir)
+    toast({ title: '备份成功', description: msg, variant: 'success' })
+  } catch (e: unknown) {
+    toast({ title: '备份失败', description: e instanceof Error ? e.message : String(e), variant: 'destructive' })
+  } finally { backingUp.value = false }
 }
 </script>
 
@@ -674,6 +749,53 @@ async function saveAiConfig() {
             <Loader2 v-if="aiSaving" class="w-4 h-4 animate-spin" />
             <Save v-else class="w-4 h-4" />
             保存配置
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+
+    <!-- Data Management -->
+    <Card>
+      <CardHeader>
+        <div class="flex items-center gap-3">
+          <div class="flex items-center justify-center w-9 h-9 rounded-lg bg-primary/10">
+            <HardDrive class="w-4 h-4 text-primary" />
+          </div>
+          <div>
+            <CardTitle class="text-base">数据管理</CardTitle>
+            <CardDescription class="mt-0.5">导出、导入和备份交易数据</CardDescription>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent class="space-y-4">
+        <div class="space-y-3">
+          <p class="text-sm font-medium text-foreground">数据导出</p>
+          <div class="flex items-center gap-2">
+            <Button variant="outline" size="sm" class="gap-2" :disabled="exporting" @click="handleExportLogs">
+              <Loader2 v-if="exporting" class="w-4 h-4 animate-spin" />
+              <Download v-else class="w-4 h-4" />导出交易日志
+            </Button>
+            <Button variant="outline" size="sm" class="gap-2" :disabled="exporting" @click="handleExportPlans">
+              <Download class="w-4 h-4" />导出交易计划
+            </Button>
+          </div>
+        </div>
+        <div class="border-t border-border/50" />
+        <div class="space-y-3">
+          <p class="text-sm font-medium text-foreground">数据导入</p>
+          <p class="text-xs text-muted-foreground">支持 CSV 格式的交易日志导入</p>
+          <Button variant="outline" size="sm" class="gap-2" :disabled="importing" @click="handleImport">
+            <Loader2 v-if="importing" class="w-4 h-4 animate-spin" />
+            <Upload v-else class="w-4 h-4" />导入 CSV 文件
+          </Button>
+        </div>
+        <div class="border-t border-border/50" />
+        <div class="space-y-3">
+          <p class="text-sm font-medium text-foreground">数据备份</p>
+          <p class="text-xs text-muted-foreground">完整备份数据库到指定目录</p>
+          <Button variant="outline" size="sm" class="gap-2" :disabled="backingUp" @click="handleBackup">
+            <Loader2 v-if="backingUp" class="w-4 h-4 animate-spin" />
+            <HardDrive v-else class="w-4 h-4" />创建备份
           </Button>
         </div>
       </CardContent>
