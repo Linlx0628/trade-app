@@ -13,25 +13,25 @@ pub struct ImportPreviewResponse {
 }
 
 #[tauri::command]
-pub fn export_trade_logs_csv(
+pub fn export_trade_logs(
     state: State<'_, DbState>,
     account_id: String,
     file_path: String,
 ) -> Result<String, AppError> {
-    ExportService::export_trade_logs_csv(&state, &account_id, &file_path)
+    ExportService::export_trade_logs(&state, &account_id, &file_path)
 }
 
 #[tauri::command]
-pub fn export_trade_plans_csv(
+pub fn export_trade_plans(
     state: State<'_, DbState>,
     account_id: String,
     file_path: String,
 ) -> Result<String, AppError> {
-    ExportService::export_trade_plans_csv(&state, &account_id, &file_path)
+    ExportService::export_trade_plans(&state, &account_id, &file_path)
 }
 
 #[tauri::command]
-pub fn preview_import_csv(
+pub fn preview_import(
     file_path: String,
 ) -> Result<ImportPreviewResponse, AppError> {
     let preview = ImportService::preview_csv(&file_path)?;
@@ -43,12 +43,12 @@ pub fn preview_import_csv(
 }
 
 #[tauri::command]
-pub fn import_trade_logs_csv(
+pub fn import_trade_logs(
     state: State<'_, DbState>,
     file_path: String,
     account_id: String,
 ) -> Result<ImportResult, AppError> {
-    ImportService::import_trade_logs_csv(&state, &file_path, &account_id)
+    ImportService::import_trade_logs(&state, &file_path, &account_id)
 }
 
 #[tauri::command]

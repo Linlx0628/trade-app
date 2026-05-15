@@ -117,14 +117,14 @@ export interface ImportResult {
 }
 
 export const dataIoApi = {
-  exportTradeLogsCsv: (accountId: string, filePath: string) =>
-    tauriCommand<string>('export_trade_logs_csv', { accountId, filePath }),
-  exportTradePlansCsv: (accountId: string, filePath: string) =>
-    tauriCommand<string>('export_trade_plans_csv', { accountId, filePath }),
-  previewImportCsv: (filePath: string) =>
-    tauriCommand<ImportPreviewResponse>('preview_import_csv', { filePath }),
-  importTradeLogsCsv: (filePath: string, accountId: string) =>
-    tauriCommand<ImportResult>('import_trade_logs_csv', { filePath, accountId }),
+  exportTradeLogs: (accountId: string, filePath: string) =>
+    tauriCommand<string>('export_trade_logs', { accountId, filePath }),
+  exportTradePlans: (accountId: string, filePath: string) =>
+    tauriCommand<string>('export_trade_plans', { accountId, filePath }),
+  previewImport: (filePath: string) =>
+    tauriCommand<ImportPreviewResponse>('preview_import', { filePath }),
+  importTradeLogs: (filePath: string, accountId: string) =>
+    tauriCommand<ImportResult>('import_trade_logs', { filePath, accountId }),
   createBackup: (backupDir: string) =>
     tauriCommand<string>('create_backup', { backupDir }),
 }

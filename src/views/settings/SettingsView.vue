@@ -260,7 +260,7 @@ async function handleExportLogs() {
     if (!path) { exporting.value = false; return }
     const dir = typeof path === 'string' ? path : path
     const { dataIoApi } = await import('@/lib/tauri')
-    const msg = await dataIoApi.exportTradeLogsCsv(acc.id, `${dir}/交易日志_${new Date().toISOString().slice(0,10)}.csv`)
+    const msg = await dataIoApi.exportTradeLogs(acc.id, `${dir}/交易日志_${new Date().toISOString().slice(0,10)}.xlsx`)
     toast({ title: '导出成功', description: msg, variant: 'success' })
   } catch (e: unknown) {
     toast({ title: '导出失败', description: e instanceof Error ? e.message : String(e), variant: 'destructive' })
@@ -277,7 +277,7 @@ async function handleExportPlans() {
     if (!path) { exporting.value = false; return }
     const dir = typeof path === 'string' ? path : path
     const { dataIoApi } = await import('@/lib/tauri')
-    const msg = await dataIoApi.exportTradePlansCsv(acc.id, `${dir}/交易计划_${new Date().toISOString().slice(0,10)}.csv`)
+    const msg = await dataIoApi.exportTradePlans(acc.id, `${dir}/交易计划_${new Date().toISOString().slice(0,10)}.xlsx`)
     toast({ title: '导出成功', description: msg, variant: 'success' })
   } catch (e: unknown) {
     toast({ title: '导出失败', description: e instanceof Error ? e.message : String(e), variant: 'destructive' })
@@ -290,11 +290,11 @@ async function handleImport() {
   importing.value = true
   try {
     const { open } = await import('@tauri-apps/plugin-dialog')
-    const selected = await open({ multiple: false, filters: [{ name: 'CSV', extensions: ['csv'] }], title: '选择CSV文件' })
+    const selected = await open({ multiple: false, filters: [{ name: 'Excel/CSV', extensions: ['xlsx', 'csv'] }], title: '选择Excel或CSV文件' })
     if (!selected) { importing.value = false; return }
     const filePath = typeof selected === 'string' ? selected : selected
     const { dataIoApi } = await import('@/lib/tauri')
-    const result = await dataIoApi.importTradeLogsCsv(filePath, acc.id)
+    const result = await dataIoApi.importTradeLogs(filePath, acc.id)
     toast({ title: '导入完成', description: `成功 ${result.imported} 条，跳过 ${result.skipped} 条`, variant: result.imported > 0 ? 'success' : 'destructive' })
     if (result.errors.length > 0) console.warn('Import errors:', result.errors)
   } catch (e: unknown) {
@@ -873,10 +873,10 @@ async function handleTogglePin(id: string) {
         <div class="border-t border-border/50" />
         <div class="space-y-3">
           <p class="text-sm font-medium text-foreground">数据导入</p>
-          <p class="text-xs text-muted-foreground">支持 CSV 格式的交易日志导入</p>
+          <p class="text-xs text-muted-foreground">支持 Excel (.xlsx) 和 CSV 格式</p>
           <Button variant="outline" size="sm" class="gap-2" :disabled="importing" @click="handleImport">
             <Loader2 v-if="importing" class="w-4 h-4 animate-spin" />
-            <Upload v-else class="w-4 h-4" />导入 CSV 文件
+            <Upload v-else class="w-4 h-4" />导入文件
           </Button>
         </div>
         <div class="border-t border-border/50" />
