@@ -21,6 +21,8 @@ const route = useRoute()
 const router = useRouter()
 const appStore = useAppStore()
 const showSearch = ref(false)
+const isMac = ref(navigator.platform.toUpperCase().includes('MAC'))
+const modKey = computed(() => isMac.value ? '⌘' : 'Ctrl+')
 
 const pageTitle = computed(() => {
   return (route.meta.title as string) || '策盈 TradeMind'
@@ -194,7 +196,7 @@ function navigateTo(path: string) {
           >
             <Search class="w-3.5 h-3.5" />
             <span>搜索</span>
-            <kbd class="text-[10px] bg-background px-1 py-0.5 rounded ml-1">⌘K</kbd>
+            <kbd class="text-[10px] bg-background px-1 py-0.5 rounded ml-1">{{ modKey }}K</kbd>
           </button>
         </div>
       </header>
