@@ -39,20 +39,30 @@ watch(() => accountStore.currentAccount, (acc) => { if (acc) dashboardStore.fetc
 
 function fmt(v: number) { return new Intl.NumberFormat('zh-CN', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(v) }
 
+const chartTextColor = '#9aa5b4'
+const chartGridColor = 'rgba(30,42,58,0.8)'
+const profitColor = 'rgba(34,188,83,0.7)'
+const lossColor = 'rgba(224,63,60,0.7)'
+
 const pnlChartOptions = computed(() => ({
   responsive: true,
   maintainAspectRatio: false,
   plugins: {
     legend: { display: false },
     tooltip: {
+      backgroundColor: '#141c26',
+      titleColor: '#e8eaed',
+      bodyColor: '#e8eaed',
+      borderColor: '#1e2a3a',
+      borderWidth: 1,
       callbacks: {
         label: (ctx: any) => `盈亏: ${ctx.parsed.y >= 0 ? '+' : ''}${ctx.parsed.y.toFixed(0)}`,
       },
     },
   },
   scales: {
-    x: { grid: { display: false }, ticks: { font: { size: 10 }, maxRotation: 0, maxTicksLimit: 10 } },
-    y: { grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { font: { size: 10 }, callback: (v: any) => v.toFixed(0) } },
+    x: { grid: { display: false }, ticks: { font: { size: 10 }, color: chartTextColor, maxRotation: 0, maxTicksLimit: 10 } },
+    y: { grid: { color: chartGridColor }, ticks: { font: { size: 10 }, color: chartTextColor, callback: (v: any) => v.toFixed(0) } },
   },
 }))
 
@@ -60,7 +70,7 @@ const pnlChartData = computed(() => ({
   labels: pnlTrend.value.map(t => t.date.slice(5)),
   datasets: [{
     data: pnlTrend.value.map(t => t.pnl),
-    backgroundColor: pnlTrend.value.map(t => t.pnl >= 0 ? 'rgba(34,197,94,0.6)' : 'rgba(239,68,68,0.6)'),
+    backgroundColor: pnlTrend.value.map(t => t.pnl >= 0 ? profitColor : lossColor),
     borderRadius: 3,
     barPercentage: 0.7,
   }],
@@ -70,10 +80,10 @@ const symbolChartOptions = computed(() => ({
   responsive: true,
   maintainAspectRatio: false,
   indexAxis: 'y' as const,
-  plugins: { legend: { display: false } },
+  plugins: { legend: { display: false }, tooltip: { backgroundColor: '#141c26', titleColor: '#e8eaed', bodyColor: '#e8eaed', borderColor: '#1e2a3a', borderWidth: 1 } },
   scales: {
-    x: { grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { font: { size: 10 }, callback: (v: any) => v.toFixed(0) } },
-    y: { grid: { display: false }, ticks: { font: { size: 11 } } },
+    x: { grid: { color: chartGridColor }, ticks: { font: { size: 10 }, color: chartTextColor, callback: (v: any) => v.toFixed(0) } },
+    y: { grid: { display: false }, ticks: { font: { size: 11 }, color: chartTextColor } },
   },
 }))
 
@@ -81,7 +91,7 @@ const symbolChartData = computed(() => ({
   labels: symbolPnl.value.slice(0, 8).map(s => s.symbol),
   datasets: [{
     data: symbolPnl.value.slice(0, 8).map(s => s.total_pnl),
-    backgroundColor: symbolPnl.value.slice(0, 8).map(s => s.total_pnl >= 0 ? 'rgba(34,197,94,0.7)' : 'rgba(239,68,68,0.7)'),
+    backgroundColor: symbolPnl.value.slice(0, 8).map(s => s.total_pnl >= 0 ? profitColor : lossColor),
     borderRadius: 3,
     barPercentage: 0.6,
   }],

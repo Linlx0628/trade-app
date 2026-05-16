@@ -1,41 +1,39 @@
 @import "tailwindcss";
 
 @theme {
-  /* Soft Modern Business Light Theme */
-  --color-background: oklch(0.977 0.002 260);
-  --color-foreground: oklch(0.22 0.01 260);
-  --color-card: oklch(0.998 0 0);
-  --color-card-foreground: oklch(0.22 0.01 260);
-  --color-popover: oklch(0.998 0 0);
-  --color-popover-foreground: oklch(0.22 0.01 260);
-  --color-primary: oklch(0.45 0.06 260);
-  --color-primary-foreground: oklch(0.98 0 0);
-  --color-secondary: oklch(0.955 0.005 260);
-  --color-secondary-foreground: oklch(0.30 0.01 260);
-  --color-muted: oklch(0.955 0.005 260);
-  --color-muted-foreground: oklch(0.52 0.01 260);
-  --color-accent: oklch(0.955 0.005 260);
-  --color-accent-foreground: oklch(0.30 0.01 260);
-  --color-destructive: oklch(0.55 0.2 25);
-  --color-destructive-foreground: oklch(0.98 0 0);
-  --color-border: oklch(0.92 0.003 260);
-  --color-input: oklch(0.92 0.003 260);
-  --color-ring: oklch(0.45 0.06 260);
+  /* Trading Terminal Dark Theme */
+  --color-background: #0f151d;
+  --color-foreground: #e8eaed;
+  --color-card: #141c26;
+  --color-card-foreground: #e8eaed;
+  --color-popover: #141c26;
+  --color-popover-foreground: #e8eaed;
+  --color-primary: #cea43e;
+  --color-primary-foreground: #0f151d;
+  --color-secondary: #1a2433;
+  --color-secondary-foreground: #e8eaed;
+  --color-muted: #1a2433;
+  --color-muted-foreground: #9aa5b4;
+  --color-accent: #1a2433;
+  --color-accent-foreground: #e8eaed;
+  --color-destructive: #e03f3c;
+  --color-destructive-foreground: #ffffff;
+  --color-border: #1e2a3a;
+  --color-input: #1e2a3a;
+  --color-ring: #cea43e;
   --radius: 0.5rem;
 
-  /* Trading system - soft & clear */
-  --color-profit: oklch(0.62 0.16 155);
-  --color-profit-foreground: oklch(0.98 0 0);
-  --color-loss: oklch(0.58 0.18 22);
-  --color-loss-foreground: oklch(0.98 0 0);
-  --color-warning: oklch(0.72 0.14 75);
-  --color-warning-foreground: oklch(0.25 0.03 75);
+  --color-profit: #22bc53;
+  --color-profit-foreground: #ffffff;
+  --color-loss: #e03f3c;
+  --color-loss-foreground: #ffffff;
+  --color-warning: #e8a735;
+  --color-warning-foreground: #0f151d;
 
-  /* Sidebar - clean white with subtle warmth */
-  --color-sidebar: oklch(0.998 0 0);
-  --color-sidebar-foreground: oklch(0.35 0.01 260);
-  --color-sidebar-accent: oklch(0.96 0.006 260);
-  --color-sidebar-border: oklch(0.94 0.003 260);
+  --color-sidebar: #0d121a;
+  --color-sidebar-foreground: #9aa5b4;
+  --color-sidebar-accent: #1a2433;
+  --color-sidebar-border: #1e2a3a;
 }
 
 @layer base {
@@ -79,7 +77,7 @@
     }
     strong {
       font-weight: 600;
-      color: var(--color-foreground);
+      color: var(--color-primary);
     }
     em {
       font-style: italic;
