@@ -112,7 +112,7 @@ impl MarketDataService {
         } else if symbol.starts_with("sh") || symbol.starts_with("sz") {
             Self::fetch_stock_kline_tencent(symbol, period, count).await
         } else {
-            Self::fetch_futures_kline(symbol, period, count).await
+            Self::fetch_futures_kline_eastmoney(symbol, period, count).await
         }
     }
 
@@ -334,39 +334,108 @@ impl MarketDataService {
         klines
     }
 
-    /// 期货K线 — 新浪 JSONP
-    async fn fetch_futures_kline(
+    /// 期货K线 — 东方财富
+    /// symbol 格式: nf_LC0 → 东财secid: 225.lcm (品种前缀+主连后缀)
+    async fn fetch_futures_kline_eastmoney(
         symbol: &str,
         period: &str,
         count: u32,
     ) -> Result<Vec<KlineData>, AppError> {
         let client = Self::build_client()?;
-        let scale = match period {
-            "1m" => "5", "5m" => "15", "15m" => "30",
-            "30m" => "60", "60m" => "120", _ => "1440",
+
+        // 提取品种前缀：nf_LC0 → LC → lc
+        let raw = symbol.strip_prefix("nf_").unwrap_or(symbol);
+        let prefix = raw.trim_end_matches(|c: char| c.is_ascii_digit()).to_lowercase();
+
+        // 品种前缀 → 交易所市场编号
+        let market = Self::futures_market_code(&prefix);
+
+        // 东财主连代码 = 品种前缀小写 + "m"
+        let em_code = format!("{}m", prefix);
+        let secid = format!("{}.{}", market, em_code);
+
+        let klt = match period {
+            "5m" => "5",
+            "15m" => "15",
+            "30m" => "30",
+            "60m" => "60",
+            "day" | "daily" => "101",
+            "week" => "102",
+            "month" => "103",
+            _ => "101",
         };
 
-        let symbols_to_try = if symbol.starts_with("nf_") {
-            vec![symbol.to_string()]
-        } else {
-            vec![format!("nf_{}", symbol), symbol.to_string()]
+        let url = format!(
+            "https://push2his.eastmoney.com/api/qt/stock/kline/get?secid={}&fields1=f1,f2,f3,f4,f5,f6&fields2=f51,f52,f53,f54,f55,f56,f57,f58,f59,f60,f61,f62,f63,f64,f65&klt={}&fqt=0&lmt={}&end=20500101",
+            secid, klt, count
+        );
+
+        let resp = client
+            .get(&url)
+            .header("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36")
+            .send()
+            .await
+            .map_err(|e| AppError::Database(format!("东财期货K线请求失败: {}", e)))?
+            .text()
+            .await
+            .map_err(|e| AppError::Database(format!("读取东财期货K线失败: {}", e)))?;
+
+        let json: serde_json::Value = serde_json::from_str(&resp)
+            .map_err(|e| AppError::Database(format!("东财期货K线JSON解析失败: {}", e)))?;
+
+        let Some(klines_arr) = json
+            .get("data")
+            .and_then(|d| d.get("klines"))
+            .and_then(|v| v.as_array())
+        else {
+            return Ok(Vec::new());
         };
 
-        for sym in &symbols_to_try {
-            let url = format!(
-                "https://finance.sina.com.cn/futures/api/jsonp.php/IO.XSRV2.CallbackList/xxx/CfuturesApiService.getKLineData?symbol={}&scale={}&datalen={}",
-                sym, scale, count
-            );
-            if let Ok(resp) = client.get(&url).header("Referer", "https://finance.sina.com.cn").send().await {
-                if let Ok(bytes) = resp.bytes().await {
-                    let text = Self::decode_sina(&bytes);
-                    if let Ok(klines) = Self::parse_kline_jsonp(&text) {
-                        if !klines.is_empty() { return Ok(klines); }
-                    }
-                }
+        let mut klines = Vec::new();
+        for item in klines_arr {
+            let line = item.as_str().unwrap_or("");
+            let parts: Vec<&str> = line.split(',').collect();
+            if parts.len() < 6 {
+                continue;
             }
+            let parse_f = |s: &str| -> f64 { s.parse().unwrap_or(0.0) };
+            // 字段顺序: 日期, open, close, high, low, volume, ...
+            klines.push(KlineData {
+                timestamp: parts[0].to_string(),
+                open: parse_f(parts[1]),
+                close: parse_f(parts[2]),
+                high: parse_f(parts[3]),
+                low: parse_f(parts[4]),
+                volume: parse_f(parts[5]),
+            });
         }
-        Ok(Vec::new())
+
+        Ok(klines)
+    }
+
+    /// 品种前缀 → 东财交易所市场编号
+    /// 上期所(SHFE)=113, 大商所(DCE)=114, 郑商所(CZCE)=115, 广期所(GFEX)=225, 中金所(CFFEX)=8
+    fn futures_market_code(prefix: &str) -> u32 {
+        match prefix {
+            // 上期所
+            "ag" | "au" | "cu" | "al" | "zn" | "pb" | "ni" | "sn" |
+            "rb" | "hc" | "ss" | "bu" | "ru" | "sp" | "fu" | "wr" |
+            "nr" | "bc" | "ad" => 113,
+            // 大商所
+            "a" | "b" | "c" | "cs" | "m" | "y" | "p" | "jd" |
+            "l" | "v" | "pp" | "j" | "jm" | "i" | "eg" | "eb" |
+            "pg" | "lh" | "fb" | "bb" | "rr" | "bz" | "lg" => 114,
+            // 郑商所
+            "wh" | "pm" | "ri" | "rs" | "sr" | "cf" | "ta" | "oi" |
+            "ma" | "fg" | "sf" | "sm" | "zc" | "sa" | "ur" | "sh" |
+            "ap" | "cj" | "pk" | "cy" | "rm" => 115,
+            // 中金所
+            "if" | "ic" | "ih" | "im" | "tf" | "ts" | "tl" | "t" => 8,
+            // 广期所
+            "lc" | "si" => 225,
+            // 默认（尝试上期所）
+            _ => 113,
+        }
     }
 
     // ── 搜索 ──
