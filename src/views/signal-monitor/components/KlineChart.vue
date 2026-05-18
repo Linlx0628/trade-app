@@ -65,16 +65,16 @@ const chartOption = computed(() => {
           name: p.name,
           symbol: 'triangle',
           symbolSize: 12,
-          itemStyle: { color: '#22bc53' },
-          label: { show: true, formatter: p.name, position: 'bottom', color: '#22bc53', fontSize: 10 },
+          itemStyle: { color: '#e03f3c' },
+          label: { show: true, formatter: p.name, position: 'bottom', color: '#e03f3c', fontSize: 10 },
         })),
         ...sellPoints.map(p => ({
           coord: p.coord,
           name: p.name,
           symbol: 'path://M-6,-6L6,6M6,-6L-6,6',
           symbolSize: 12,
-          itemStyle: { color: '#e03f3c' },
-          label: { show: true, formatter: p.name, position: 'top', color: '#e03f3c', fontSize: 10 },
+          itemStyle: { color: '#22bc53' },
+          label: { show: true, formatter: p.name, position: 'top', color: '#22bc53', fontSize: 10 },
         })),
       ]
     }
@@ -145,10 +145,10 @@ const chartOption = computed(() => {
         xAxisIndex: 0,
         yAxisIndex: 0,
         itemStyle: {
-          color: '#22bc53',
-          color0: '#e03f3c',
-          borderColor: '#22bc53',
-          borderColor0: '#e03f3c',
+          color: '#e03f3c',
+          color0: '#22bc53',
+          borderColor: '#e03f3c',
+          borderColor0: '#22bc53',
         },
         markPoint: Object.keys(markPoints).length > 0 ? markPoints : undefined,
       },
@@ -188,7 +188,7 @@ const chartOption = computed(() => {
         data: volumes.map((v, i) => ({
           value: v,
           itemStyle: {
-            color: i > 0 && props.data[i].close >= props.data[i].open ? '#22bc53' : '#e03f3c',
+            color: i > 0 && props.data[i].close >= props.data[i].open ? '#e03f3c' : '#22bc53',
             opacity: 0.6,
           },
         })),
