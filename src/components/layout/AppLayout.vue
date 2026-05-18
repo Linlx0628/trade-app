@@ -17,6 +17,7 @@ import { useAppStore } from '@/stores/app'
 import { Separator } from '@/components/ui/separator'
 import { cn } from '@/lib/utils'
 import GlobalSearchDialog from './GlobalSearchDialog.vue'
+import AccountSwitcher from './AccountSwitcher.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -95,6 +96,11 @@ function navigateTo(path: string) {
             </span>
           </Transition>
         </div>
+      </div>
+
+      <!-- Account Switcher -->
+      <div v-if="!appStore.sidebarCollapsed" class="px-2 py-2 border-b border-sidebar-border">
+        <AccountSwitcher />
       </div>
 
       <!-- Navigation -->
