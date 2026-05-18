@@ -2,6 +2,7 @@
 
 pub mod account;
 pub mod ai;
+pub mod backup;
 pub mod dashboard;
 pub mod data_io;
 pub mod search;

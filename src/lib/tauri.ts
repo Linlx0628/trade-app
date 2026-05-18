@@ -182,3 +182,38 @@ export const searchApi = {
   search: (accountId: string, query: string, limit?: number) =>
     tauriCommand<SearchResult[]>('global_search', { accountId, query, limit: limit || null }),
 }
+
+// Backup API
+export interface BackupConfig {
+  enabled: boolean
+  backup_dir: string
+  interval_minutes: number
+  max_backups: number
+  backup_on_start: boolean
+  backup_on_close: boolean
+}
+
+export interface BackupInfo {
+  filename: string
+  file_size: number
+  created_at: string
+}
+
+export interface BackupStatus {
+  last_backup_at: string | null
+  next_backup_at: string | null
+  total_backups: number
+  backup_dir: string
+  total_size_mb: number
+  enabled: boolean
+}
+
+export const backupApi = {
+  getConfig: () => tauriCommand<BackupConfig>('get_backup_config'),
+  updateConfig: (config: BackupConfig) => tauriCommand<BackupConfig>('update_backup_config', { config }),
+  performBackup: () => tauriCommand<BackupInfo>('perform_backup'),
+  listBackups: () => tauriCommand<BackupInfo[]>('list_backups'),
+  restoreBackup: (filename: string) => tauriCommand<void>('restore_backup', { filename }),
+  deleteBackup: (filename: string) => tauriCommand<void>('delete_backup', { filename }),
+  getStatus: () => tauriCommand<BackupStatus>('get_backup_status'),
+}

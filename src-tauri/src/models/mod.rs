@@ -1,6 +1,7 @@
 //! 数据模型模块
 
 pub mod account;
+pub mod backup;
 pub mod trade_log;
 pub mod trade_plan;
 pub mod trade_summary;

@@ -2,6 +2,7 @@
 
 pub mod account_service;
 pub mod ai_service;
+pub mod auto_backup_service;
 pub mod calculation_service;
 pub mod dashboard_service;
 pub mod export_service;
@@ -14,6 +15,7 @@ pub mod trade_template_service;
 
 pub use account_service::AccountService;
 pub use ai_service::AiService;
+pub use auto_backup_service::AutoBackupService;
 pub use calculation_service::CalculationService;
 pub use dashboard_service::DashboardService;
 pub use export_service::ExportService;

@@ -44,6 +44,8 @@ import {
   AlertDialogCancel,
 } from '@/components/ui/alert-dialog'
 import { cn } from '@/lib/utils'
+import BackupConfigPanel from './components/BackupConfigPanel.vue'
+import BackupListPanel from './components/BackupListPanel.vue'
 import type { Account } from '@/types/common'
 
 const accountStore = useAccountStore()
@@ -248,7 +250,6 @@ async function saveAiConfig() {
 // --- Data IO ---
 const exporting = ref(false)
 const importing = ref(false)
-const backingUp = ref(false)
 
 async function handleExportLogs() {
   const acc = accountStore.currentAccount
@@ -300,21 +301,6 @@ async function handleImport() {
   } catch (e: unknown) {
     toast({ title: '导入失败', description: e instanceof Error ? e.message : String(e), variant: 'destructive' })
   } finally { importing.value = false }
-}
-
-async function handleBackup() {
-  backingUp.value = true
-  try {
-    const { open } = await import('@tauri-apps/plugin-dialog')
-    const path = await open({ directory: true, multiple: false, title: '选择备份目录' })
-    if (!path) { backingUp.value = false; return }
-    const dir = typeof path === 'string' ? path : path
-    const { dataIoApi } = await import('@/lib/tauri')
-    const msg = await dataIoApi.createBackup(dir)
-    toast({ title: '备份成功', description: msg, variant: 'success' })
-  } catch (e: unknown) {
-    toast({ title: '备份失败', description: e instanceof Error ? e.message : String(e), variant: 'destructive' })
-  } finally { backingUp.value = false }
 }
 
 // --- Template Management ---
@@ -879,16 +865,11 @@ async function handleTogglePin(id: string) {
             <Upload v-else class="w-4 h-4" />导入文件
           </Button>
         </div>
-        <div class="border-t border-border/50" />
-        <div class="space-y-3">
-          <p class="text-sm font-medium text-foreground">数据备份</p>
-          <p class="text-xs text-muted-foreground">完整备份数据库到指定目录</p>
-          <Button variant="outline" size="sm" class="gap-2" :disabled="backingUp" @click="handleBackup">
-            <Loader2 v-if="backingUp" class="w-4 h-4 animate-spin" />
-            <HardDrive v-else class="w-4 h-4" />创建备份
-          </Button>
-        </div>
       </CardContent>
     </Card>
+
+    <!-- Auto Backup System -->
+    <BackupConfigPanel />
+    <BackupListPanel />
   </div>
 </template>
