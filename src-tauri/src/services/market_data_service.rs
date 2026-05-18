@@ -108,7 +108,7 @@ impl MarketDataService {
         if symbol.starts_with("hk") {
             Self::fetch_kline_kline_api(symbol, period, count).await
         } else if symbol.starts_with("us") {
-            Self::fetch_kline_kline_api(symbol, period, count).await
+            Self::fetch_us_kline_yahoo(symbol, period, count).await
         } else if symbol.starts_with("sh") || symbol.starts_with("sz") {
             Self::fetch_stock_kline_tencent(symbol, period, count).await
         } else {
@@ -201,6 +201,110 @@ impl MarketDataService {
         let Some(arr) = arr else { return Ok(Vec::new()) };
 
         Ok(Self::parse_tencent_kline_array(arr))
+    }
+
+    /// 美股 K线 — Yahoo Finance API
+    /// symbol 格式: usTME → Yahoo: TME
+    async fn fetch_us_kline_yahoo(
+        symbol: &str,
+        period: &str,
+        count: u32,
+    ) -> Result<Vec<KlineData>, AppError> {
+        let client = Self::build_client()?;
+
+        // 去掉 "us" 前缀，转为 Yahoo symbol
+        let yahoo_sym = symbol.strip_prefix("us").unwrap_or(symbol);
+
+        let interval = match period {
+            "5m" => "5m",
+            "15m" => "15m",
+            "30m" => "30m",
+            "60m" => "1h",
+            "day" | "daily" => "1d",
+            "week" => "1wk",
+            "month" => "1mo",
+            _ => "1d",
+        };
+
+        // 根据周期选择合适的 range（确保获取足够的数据量）
+        let range = match period {
+            "5m" | "15m" | "30m" | "60m" => "1mo",
+            "day" => "1y",
+            "week" => "5y",
+            "month" => "max",
+            _ => "1y",
+        };
+
+        let url = format!(
+            "https://query1.finance.yahoo.com/v8/finance/chart/{}?range={}&interval={}",
+            yahoo_sym, range, interval
+        );
+
+        let resp = client
+            .get(&url)
+            .header("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36")
+            .send()
+            .await
+            .map_err(|e| AppError::Database(format!("Yahoo K线请求失败: {}", e)))?
+            .text()
+            .await
+            .map_err(|e| AppError::Database(format!("读取Yahoo K线失败: {}", e)))?;
+
+        let json: serde_json::Value = serde_json::from_str(&resp)
+            .map_err(|e| AppError::Database(format!("Yahoo K线JSON解析失败: {}", e)))?;
+
+        let result = json
+            .get("chart")
+            .and_then(|c| c.get("result"))
+            .and_then(|r| r.as_array())
+            .and_then(|arr| arr.first());
+
+        let Some(result) = result else { return Ok(Vec::new()) };
+
+        let timestamps = result.get("timestamp").and_then(|t| t.as_array());
+        let indicators = result.get("indicators").and_then(|i| i.get("quote"));
+        let Some(timestamps) = timestamps else { return Ok(Vec::new()) };
+        let Some(indicators) = indicators else { return Ok(Vec::new()) };
+        let Some(quote) = indicators.as_array().and_then(|a| a.first()) else {
+            return Ok(Vec::new());
+        };
+
+        let opens = quote.get("open").and_then(|v| v.as_array());
+        let highs = quote.get("high").and_then(|v| v.as_array());
+        let lows = quote.get("low").and_then(|v| v.as_array());
+        let closes = quote.get("close").and_then(|v| v.as_array());
+        let volumes = quote.get("volume").and_then(|v| v.as_array());
+
+        let mut klines = Vec::new();
+        for i in 0..timestamps.len() {
+            let ts = timestamps.get(i).and_then(|v| v.as_i64()).unwrap_or(0);
+            let timestamp = chrono::DateTime::from_timestamp(ts, 0)
+                .map(|dt| dt.format("%Y-%m-%d %H:%M:%S").to_string())
+                .unwrap_or_default();
+
+            let get_f = |arr: Option<&Vec<serde_json::Value>>, idx: usize| -> f64 {
+                arr.and_then(|a| a.get(idx))
+                    .and_then(|v| v.as_f64())
+                    .unwrap_or(0.0)
+            };
+
+            klines.push(KlineData {
+                timestamp,
+                open: get_f(opens.clone(), i),
+                high: get_f(highs.clone(), i),
+                low: get_f(lows.clone(), i),
+                close: get_f(closes.clone(), i),
+                volume: get_f(volumes.clone(), i),
+            });
+        }
+
+        // 只取最后 count 条
+        let total = klines.len();
+        if total > count as usize {
+            klines = klines.into_iter().skip(total - count as usize).collect();
+        }
+
+        Ok(klines)
     }
 
     fn parse_tencent_kline_array(arr: &[serde_json::Value]) -> Vec<KlineData> {

@@ -8,7 +8,7 @@ import { SelectNative } from '@/components/ui/select'
 import PriceTicker from './components/PriceTicker.vue'
 import KlineChart from './components/KlineChart.vue'
 import ChanlunPanel from './components/ChanlunPanel.vue'
-import SignalAlertList from './components/SignalAlertList.vue'
+import AIAnalysisPanel from './components/AIAnalysisPanel.vue'
 
 const marketStore = useMarketStore()
 
@@ -16,7 +16,7 @@ const currentPeriod = ref('day')
 const searchKeyword = ref('')
 const searchResults = ref<SymbolInfo[]>([])
 const searchLoading = ref(false)
-const activeTab = ref<'main' | 'chanlun'>('main')
+const activeTab = ref<'main' | 'chanlun' | 'ai'>('main')
 
 const periods = [
   { value: '5m', label: '5分钟' },
@@ -185,6 +185,7 @@ onUnmounted(() => {
           <div class="flex gap-1">
             <Button size="sm" :variant="activeTab === 'main' ? 'default' : 'ghost'" class="text-xs h-7" @click="activeTab = 'main'">K线</Button>
             <Button size="sm" :variant="activeTab === 'chanlun' ? 'default' : 'ghost'" class="text-xs h-7" @click="activeTab = 'chanlun'">缠论</Button>
+            <Button size="sm" :variant="activeTab === 'ai' ? 'default' : 'ghost'" class="text-xs h-7" @click="activeTab = 'ai'">AI分析</Button>
           </div>
         </div>
 
@@ -195,6 +196,13 @@ onUnmounted(() => {
 
         <!-- 缠论分析 -->
         <ChanlunPanel v-if="activeTab === 'chanlun' && marketStore.currentSymbol" :symbol="marketStore.currentSymbol" />
+
+        <!-- AI分析 -->
+        <AIAnalysisPanel v-if="activeTab === 'ai' && marketStore.currentSymbol"
+          :symbol="marketStore.currentSymbol"
+          :symbol-name="currentQuote?.name || marketStore.currentSymbol"
+          :kline-data="marketStore.klineData"
+          :period="currentPeriod" />
       </template>
     </div>
 
@@ -300,9 +308,6 @@ onUnmounted(() => {
       </div>
 
       <div class="flex-1" />
-
-      <!-- Signal Alerts -->
-      <SignalAlertList />
     </div>
   </div>
 </template>

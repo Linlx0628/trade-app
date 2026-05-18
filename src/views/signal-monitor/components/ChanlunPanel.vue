@@ -1,12 +1,10 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { GitBranch, Loader2, TrendingUp, TrendingDown, Minus, Bell } from 'lucide-vue-next'
+import { GitBranch, Loader2, TrendingUp, TrendingDown, Minus } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { SelectNative } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { invoke } from '@tauri-apps/api/core'
-import { useAccountStore } from '@/stores/account'
-import { useToast } from '@/components/ui/toast'
 
 interface Fractal { index: number; fractal_type: string; value: number }
 interface Bi { start_index: number; end_index: number; direction: string; start_value: number; end_value: number }
@@ -47,32 +45,6 @@ const signalLabelMap: Record<string, string> = {
   buy1: '一买', sell1: '一卖',
   buy2: '二买', sell2: '二卖',
   buy3: '三买', sell3: '三卖',
-}
-
-const accountStore = useAccountStore()
-const { toast } = useToast()
-const alertCreating = ref<string | null>(null)
-
-async function createAlert(signal: ChanlunSignal) {
-  const acc = accountStore.currentAccount
-  if (!acc) { toast({ title: '请先选择账户', variant: 'destructive' }); return }
-  alertCreating.value = signal.signal_type
-  try {
-    await invoke('create_signal_alert', {
-      dto: {
-        account_id: acc.id,
-        symbol: props.symbol,
-        alert_type: signal.signal_type,
-        condition_value: signal.price,
-        description: signal.description,
-      },
-    })
-    toast({ title: '已添加信号提醒', description: signal.description, variant: 'success' })
-  } catch (e) {
-    toast({ title: '添加失败', description: String(e), variant: 'destructive' })
-  } finally {
-    alertCreating.value = null
-  }
 }
 
 const trendIcon = {
@@ -143,13 +115,6 @@ const trendIcon = {
             {{ signalLabelMap[s.signal_type] || s.signal_type }}
           </Badge>
           <span class="text-sm text-foreground flex-1 min-w-0">{{ s.description }}</span>
-          <Button variant="ghost" size="sm" class="h-6 px-2 text-xs gap-1 shrink-0"
-            :disabled="alertCreating === s.signal_type"
-            @click="createAlert(s)">
-            <Loader2 v-if="alertCreating === s.signal_type" class="w-3 h-3 animate-spin" />
-            <Bell v-else class="w-3 h-3" />
-            提醒
-          </Button>
         </div>
       </div>
       <div v-else class="text-sm text-muted-foreground text-center py-3">
