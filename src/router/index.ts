@@ -33,6 +33,12 @@ const router = createRouter({
       component: () => import("@/views/settings/SettingsView.vue"),
       meta: { title: "账户设置" },
     },
+    {
+      path: "/signal-monitor",
+      name: "signal-monitor",
+      component: () => import("@/views/signal-monitor/SignalMonitorView.vue"),
+      meta: { title: "行情监控" },
+    },
   ],
 })
 

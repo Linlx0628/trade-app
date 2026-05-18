@@ -11,6 +11,7 @@ import {
   PanelLeft,
   TrendingUp,
   Search,
+  Activity,
 } from 'lucide-vue-next'
 import { useAppStore } from '@/stores/app'
 import { Separator } from '@/components/ui/separator'
@@ -33,6 +34,7 @@ const navItems = [
   { name: '交易计划', path: '/trade-plan', icon: FileText },
   { name: '交易日志', path: '/trade-log', icon: BookOpen },
   { name: '交易总结', path: '/trade-summary', icon: StickyNote },
+  { name: '行情监控', path: '/signal-monitor', icon: Activity },
 ]
 
 const bottomNavItems = [
