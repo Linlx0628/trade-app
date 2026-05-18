@@ -80,6 +80,11 @@ fn run_migrations(conn: &Connection) -> Result<(), crate::error::AppError> {
             "002_add_templates",
             include_str!("../../migrations/002_add_templates.sql"),
         ),
+        (
+            3,
+            "003_add_signals",
+            include_str!("../../migrations/003_add_signals.sql"),
+        ),
     ];
 
     // 逐个执行未应用的迁移

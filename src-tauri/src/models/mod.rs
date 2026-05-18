@@ -3,6 +3,7 @@
 pub mod account;
 pub mod backup;
 pub mod market_data;
+pub mod signal_alert;
 pub mod trade_log;
 pub mod trade_plan;
 pub mod trade_summary;

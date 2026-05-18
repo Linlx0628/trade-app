@@ -132,6 +132,11 @@ pub fn run() {
             commands::market_data::subscribe_market,
             commands::market_data::unsubscribe_market,
             commands::market_data::search_symbol,
+            // 缠论信号
+            commands::signal::analyze_chanlun,
+            commands::signal::get_signal_alerts,
+            commands::signal::create_signal_alert,
+            commands::signal::delete_signal_alert,
             // 自动备份
             commands::backup::get_backup_config,
             commands::backup::update_backup_config,

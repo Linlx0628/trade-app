@@ -8,6 +8,8 @@ import SymbolSearch from './components/SymbolSearch.vue'
 import PriceTicker from './components/PriceTicker.vue'
 import QuoteCard from './components/QuoteCard.vue'
 import KlineChart from './components/KlineChart.vue'
+import ChanlunPanel from './components/ChanlunPanel.vue'
+import SignalAlertList from './components/SignalAlertList.vue'
 
 const marketStore = useMarketStore()
 
@@ -117,6 +119,12 @@ onUnmounted(() => {
 
       <div class="h-[500px] rounded-lg border border-border/50 bg-card">
         <KlineChart :data="marketStore.klineData" :loading="marketStore.loading" />
+      </div>
+
+      <!-- Chanlun Analysis + Signal Alerts -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <ChanlunPanel v-if="marketStore.currentSymbol" :symbol="marketStore.currentSymbol" />
+        <SignalAlertList />
       </div>
     </template>
   </div>
