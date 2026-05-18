@@ -3,6 +3,7 @@
 pub mod account_service;
 pub mod ai_service;
 pub mod auto_backup_service;
+pub mod auth_service;
 pub mod calculation_service;
 pub mod dashboard_service;
 pub mod export_service;

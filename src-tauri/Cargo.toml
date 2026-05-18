@@ -1,6 +1,6 @@
 [package]
 name = "trade-app"
-version = "0.5.0"
+version = "0.6.0"
 description = "期货/股票交易计划与复盘系统"
 authors = ["linlx"]
 edition = "2021"

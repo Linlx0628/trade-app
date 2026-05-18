@@ -137,6 +137,14 @@ pub fn run() {
             commands::signal::get_signal_alerts,
             commands::signal::create_signal_alert,
             commands::signal::delete_signal_alert,
+            // 用户认证
+            commands::auth::get_current_user,
+            commands::auth::login,
+            commands::auth::create_user,
+            commands::auth::update_user,
+            commands::auth::delete_user,
+            commands::auth::list_users,
+            commands::auth::ensure_default_user,
             // 自动备份
             commands::backup::get_backup_config,
             commands::backup::update_backup_config,

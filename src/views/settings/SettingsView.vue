@@ -46,6 +46,7 @@ import {
 import { cn } from '@/lib/utils'
 import BackupConfigPanel from './components/BackupConfigPanel.vue'
 import BackupListPanel from './components/BackupListPanel.vue'
+import UserManagePanel from './components/UserManagePanel.vue'
 import type { Account } from '@/types/common'
 
 const accountStore = useAccountStore()
@@ -871,5 +872,8 @@ async function handleTogglePin(id: string) {
     <!-- Auto Backup System -->
     <BackupConfigPanel />
     <BackupListPanel />
+
+    <!-- User Management -->
+    <UserManagePanel />
   </div>
 </template>

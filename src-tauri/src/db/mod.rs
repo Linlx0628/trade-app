@@ -7,6 +7,7 @@ pub mod trade_log_repo;
 pub mod trade_plan_repo;
 pub mod trade_summary_repo;
 pub mod trade_template_repo;
+pub mod user_repo;
 
 use rusqlite::Connection;
 use std::sync::Mutex;
@@ -84,6 +85,11 @@ fn run_migrations(conn: &Connection) -> Result<(), crate::error::AppError> {
             3,
             "003_add_signals",
             include_str!("../../migrations/003_add_signals.sql"),
+        ),
+        (
+            4,
+            "004_add_users",
+            include_str!("../../migrations/004_add_users.sql"),
         ),
     ];
 
