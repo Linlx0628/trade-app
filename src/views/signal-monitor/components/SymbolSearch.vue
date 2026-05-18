@@ -62,7 +62,7 @@ function handleSelect(item: SymbolInfo) {
           <span class="text-muted-foreground text-xs">{{ item.symbol }}</span>
         </div>
         <span class="text-xs text-muted-foreground">
-          {{ item.market_type === 'futures' ? '期货' : '股票' }}
+          {{ { stock: 'A股', hk_stock: '港股', us_stock: '美股', futures: '期货' }[item.market_type] || item.market_type }}
         </span>
       </button>
     </div>

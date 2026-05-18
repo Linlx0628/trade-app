@@ -224,11 +224,12 @@ impl MarketDataService {
     // ── 搜索 ──
 
     pub async fn search_symbol_async(keyword: &str) -> Vec<SymbolInfo> {
-        let mut results = Self::search_futures_local(keyword);
+        let mut results = Vec::new();
 
         if let Ok(client) = Self::build_client() {
+            // type 留空 = 搜索全市场（A股+港股+期货+指数）
             let url = format!(
-                "https://suggest3.sinajs.cn/suggest/type=11,12&key={}&name=suggestdata",
+                "https://suggest3.sinajs.cn/suggest/type=&key={}&name=suggestdata",
                 keyword
             );
             if let Ok(resp) = client
@@ -302,7 +303,9 @@ impl MarketDataService {
         results
     }
 
-    /// 新浪 suggest: var suggestdata="显示名,类型,代码,完整代码,名称,...|..."
+    /// 新浪 suggest: type 编码
+    /// 11=沪A, 12=深A, 31=港股, 33=港股指数, 41=美股,
+    /// 81=场内基金, 87=期货主力品种, 103=期货合约, 109=期权合约
     fn parse_sina_suggest(text: &str) -> Vec<SymbolInfo> {
         let text = text.trim();
         let Some(eq_pos) = text.find('=') else {
@@ -320,27 +323,51 @@ impl MarketDataService {
                 continue;
             }
 
-            let full_code = fields[3].trim(); // sh600519
+            let type_code = fields[1].trim().parse::<u32>().unwrap_or(0);
+            let full_code = fields[3].trim();
             let name = fields[4].trim();
 
             if full_code.is_empty() || name.is_empty() {
                 continue;
             }
 
-            let symbol = if full_code.starts_with("s_sh") {
-                format!("sh{}", &full_code[4..])
-            } else if full_code.starts_with("s_sz") {
-                format!("sz{}", &full_code[4..])
-            } else if full_code.starts_with("sh") || full_code.starts_with("sz") {
-                full_code.to_string()
-            } else {
-                continue;
+            let (symbol, market_type) = match type_code {
+                // A股
+                11 | 12 => {
+                    let sym = if full_code.starts_with("sh") || full_code.starts_with("sz") {
+                        full_code.to_string()
+                    } else if full_code.starts_with("s_sh") {
+                        format!("sh{}", &full_code[4..])
+                    } else if full_code.starts_with("s_sz") {
+                        format!("sz{}", &full_code[4..])
+                    } else {
+                        continue;
+                    };
+                    (sym, "stock".to_string())
+                }
+                // 港股
+                31 | 33 => {
+                    // 港股代码如 00700, hsi, hstech
+                    (format!("hk{}", full_code), "hk_stock".to_string())
+                }
+                // 美股
+                41 => (full_code.to_string(), "us_stock".to_string()),
+                // 期货主力品种 (rb0, lc0 等)
+                87 => {
+                    // 加 nf_ 前缀用于实时行情
+                    let code = full_code.trim_start_matches("nf_");
+                    (format!("nf_{}", code.to_uppercase()), "futures".to_string())
+                }
+                // 期货具体合约 (rb2609, lc2609 等)
+                103 => (full_code.to_string(), "futures".to_string()),
+                // 跳过期权等
+                _ => continue,
             };
 
             results.push(SymbolInfo {
                 symbol,
                 name: name.to_string(),
-                market_type: "stock".to_string(),
+                market_type,
             });
         }
 
