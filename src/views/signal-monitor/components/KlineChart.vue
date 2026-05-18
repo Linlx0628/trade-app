@@ -95,13 +95,25 @@ const chartOption = computed(() => {
         if (!kline) return ''
         const d = kline.data as number[]
         const color = d[1] >= d[0] ? '#e03f3c' : '#22bc53'
+        // 根据价格大小自动调整小数位
+        const fmt = (v: number) => {
+          if (v >= 10000) return v.toFixed(0)
+          if (v >= 100) return v.toFixed(2)
+          return v.toFixed(3)
+        }
+        const fmtVol = (v: any) => {
+          const n = typeof v === 'object' ? v.value : v
+          if (n >= 100000000) return `${(n / 100000000).toFixed(2)}亿`
+          if (n >= 10000) return `${(n / 10000).toFixed(0)}万`
+          return String(Math.round(n))
+        }
         return `<div style="font-size:12px;line-height:1.6">
           <div>${kline.axisValue}</div>
-          <div>开盘 <span style="color:${color}">${d[0]}</span></div>
-          <div>收盘 <span style="color:${color}">${d[1]}</span></div>
-          <div>最低 <span style="color:#22bc53">${d[2]}</span></div>
-          <div>最高 <span style="color:#e03f3c">${d[3]}</span></div>
-          ${vol ? `<div>成交量 ${vol.data}</div>` : ''}
+          <div>开盘 <span style="color:${color}">${fmt(d[0])}</span></div>
+          <div>收盘 <span style="color:${color}">${fmt(d[1])}</span></div>
+          <div>最低 <span style="color:#22bc53">${fmt(d[2])}</span></div>
+          <div>最高 <span style="color:#e03f3c">${fmt(d[3])}</span></div>
+          ${vol ? `<div>成交量 ${fmtVol(vol.data)}</div>` : ''}
         </div>`
       },
     },
@@ -136,7 +148,15 @@ const chartOption = computed(() => {
         type: 'value',
         scale: true,
         axisLine: { lineStyle: { color: '#1e2a3a' } },
-        axisLabel: { color: '#5c6a7a', fontSize: 10 },
+        axisLabel: {
+          color: '#5c6a7a',
+          fontSize: 10,
+          formatter(val: number) {
+            if (val >= 10000) return String(Math.round(val))
+            if (val >= 100) return val.toFixed(2)
+            return val.toFixed(3)
+          },
+        },
         splitLine: { lineStyle: { color: '#1e2a3a', type: 'dashed' } },
         gridIndex: 0,
       },
