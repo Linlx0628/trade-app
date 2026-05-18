@@ -207,7 +207,7 @@ onUnmounted(() => {
     </div>
 
     <!-- ── Right: Watchlist Sidebar ── -->
-    <div class="w-72 shrink-0 border-l border-border pl-4 flex flex-col gap-3 overflow-hidden">
+    <div class="w-72 shrink-0 border-l border-border pl-4 flex flex-col gap-3 overflow-y-auto">
       <!-- Search -->
       <div class="relative z-50">
         <input

@@ -20,8 +20,9 @@ function formatAmount(v: number): string {
 
 <template>
   <div class="flex items-center gap-4 p-3 rounded-lg border border-border/50 bg-card">
-    <!-- Price -->
-    <div class="min-w-[120px]">
+    <!-- Name + Price -->
+    <div class="min-w-[140px]">
+      <p class="text-sm font-medium text-foreground mb-0.5">{{ quote.name }}</p>
       <div class="flex items-center gap-1.5">
         <TrendingUp v-if="quote.change > 0" class="w-4 h-4 text-profit" />
         <TrendingDown v-else-if="quote.change < 0" class="w-4 h-4 text-loss" />
