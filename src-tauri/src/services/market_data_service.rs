@@ -335,7 +335,8 @@ impl MarketDataService {
     }
 
     /// 期货K线 — 东方财富
-    /// symbol 格式: nf_LC0 → 东财secid: 225.lcm (品种前缀+主连后缀)
+    /// symbol 格式: nf_LC0(主连) → 东财secid: 225.lcm
+    /// symbol 格式: nf_M2609(具体合约) → 东财secid: 114.m2609
     async fn fetch_futures_kline_eastmoney(
         symbol: &str,
         period: &str,
@@ -343,15 +344,18 @@ impl MarketDataService {
     ) -> Result<Vec<KlineData>, AppError> {
         let client = Self::build_client()?;
 
-        // 提取品种前缀：nf_LC0 → LC → lc
         let raw = symbol.strip_prefix("nf_").unwrap_or(symbol);
         let prefix = raw.trim_end_matches(|c: char| c.is_ascii_digit()).to_lowercase();
-
-        // 品种前缀 → 交易所市场编号
         let market = Self::futures_market_code(&prefix);
 
-        // 东财主连代码 = 品种前缀小写 + "m"
-        let em_code = format!("{}m", prefix);
+        // 判断是否是主力合约(末尾为0)还是具体合约(包含合约月份)
+        let em_code = if raw.ends_with('0') && !raw.chars().take(raw.len() - 1).any(|c| c.is_ascii_digit()) {
+            // 主力合约: LC0 → lcm
+            format!("{}m", prefix)
+        } else {
+            // 具体合约: M2609 → m2609, RB2606 → rb2606
+            raw.to_lowercase()
+        };
         let secid = format!("{}.{}", market, em_code);
 
         let klt = match period {
@@ -443,6 +447,7 @@ impl MarketDataService {
     pub async fn search_symbol_async(keyword: &str) -> Vec<SymbolInfo> {
         let mut results = Vec::new();
 
+        // 新浪搜索 — A股、港股、美股
         if let Ok(client) = Self::build_client() {
             let url = format!(
                 "https://suggest3.sinajs.cn/suggest/type=&key={}&name=suggestdata",
@@ -461,9 +466,78 @@ impl MarketDataService {
             }
         }
 
+        // 东财搜索 — 补充期货品种
+        if let Ok(client) = Self::build_client() {
+            let encoded = urlencoding::encode(keyword);
+            let url = format!(
+                "https://searchapi.eastmoney.com/api/suggest/get?input={}&type=14&token=D43BF722C8E6B4AA2A199F24E7E0934E&count=20",
+                encoded
+            );
+            if let Ok(resp) = client
+                .get(&url)
+                .header("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36")
+                .send()
+                .await
+            {
+                if let Ok(text) = resp.text().await {
+                    let futures = Self::parse_eastmoney_futures(&text);
+                    results.extend(futures);
+                }
+            }
+        }
+
         // 去重
         let mut seen = std::collections::HashSet::new();
         results.retain(|r| seen.insert(r.symbol.clone()));
+        results
+    }
+
+    /// 解析东财搜索结果，只提取国内期货品种(SecurityType=12)
+    fn parse_eastmoney_futures(text: &str) -> Vec<SymbolInfo> {
+        let json: serde_json::Value = serde_json::from_str(text).unwrap_or(serde_json::Value::Null);
+        let data = json.get("QuotationCodeTable").and_then(|d| d.get("Data"));
+        let Some(data) = data else { return Vec::new() };
+        let Some(arr) = data.as_array() else { return Vec::new() };
+
+        let mut results = Vec::new();
+        for item in arr {
+            let stype = item.get("SecurityType").and_then(|v| v.as_str()).unwrap_or("");
+            if stype != "12" { continue }  // 只取国内期货
+
+            let quote_id = item.get("QuoteID").and_then(|v| v.as_str()).unwrap_or("");
+            let name = item.get("Name").and_then(|v| v.as_str()).unwrap_or("");
+
+            // QuoteID 格式: "114.m2609" → 品种代码 = "m2609"
+            let dot_pos = quote_id.find('.');
+            let Some(dot_pos) = dot_pos else { continue };
+            let em_code = &quote_id[dot_pos + 1..];
+            if em_code.is_empty() { continue }
+
+            // 内部 symbol: nf_M2609 (品种代码大写 + nf_ 前缀)
+            // 但主连/次主连代码(如rbm, rbs)需要特殊处理: rbm → nf_RB0 (主连)
+            let symbol = if em_code.ends_with('m') || em_code.ends_with('s') {
+                // 主连(rbm)或次主连(rbs) → 转为主力合约格式 nf_RB0
+                let prefix = em_code.trim_end_matches('m').trim_end_matches('s');
+                format!("nf_{}0", prefix.to_uppercase())
+            } else {
+                format!("nf_{}", em_code.to_uppercase())
+            };
+
+            // 如果名称包含"主连"/"次主连"，简化名称
+            let display_name = if name.contains("主连") {
+                name.replace("主连", "主力")
+            } else if name.contains("次主连") {
+                name.replace("次主连", "次主力")
+            } else {
+                name.to_string()
+            };
+
+            results.push(SymbolInfo {
+                symbol,
+                name: display_name,
+                market_type: "futures".to_string(),
+            });
+        }
         results
     }
 
