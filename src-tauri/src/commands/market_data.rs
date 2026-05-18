@@ -32,6 +32,6 @@ pub async fn unsubscribe_market() -> Result<(), AppError> {
 }
 
 #[tauri::command]
-pub fn search_symbol(keyword: String) -> Result<Vec<SymbolInfo>, AppError> {
-    Ok(MarketDataService::search_symbol(&keyword))
+pub async fn search_symbol(keyword: String) -> Result<Vec<SymbolInfo>, AppError> {
+    Ok(MarketDataService::search_symbol_async(&keyword).await)
 }

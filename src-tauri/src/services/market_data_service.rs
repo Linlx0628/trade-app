@@ -13,21 +13,24 @@ struct SubscriptionState {
 pub struct MarketDataService;
 
 impl MarketDataService {
-    pub async fn get_quote(symbol: &str) -> Result<MarketQuote, AppError> {
-        let client = reqwest::Client::builder()
-            .user_agent("Mozilla/5.0")
+    fn build_client() -> Result<reqwest::Client, AppError> {
+        reqwest::Client::builder()
+            .user_agent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)")
             .build()
-            .map_err(|e| AppError::Database(format!("HTTP 客户端创建失败: {}", e)))?;
+            .map_err(|e| AppError::Database(format!("HTTP 客户端创建失败: {}", e)))
+    }
 
+    // ── 实时行情 (新浪 hq.sinajs.cn) ──
+
+    pub async fn get_quote(symbol: &str) -> Result<MarketQuote, AppError> {
+        let client = Self::build_client()?;
         let url = format!("https://hq.sinajs.cn/list={}", symbol);
-        let resp = client
+        let text = client
             .get(&url)
             .header("Referer", "https://finance.sina.com.cn")
             .send()
             .await
-            .map_err(|e| AppError::Database(format!("行情请求失败: {}", e)))?;
-
-        let text = resp
+            .map_err(|e| AppError::Database(format!("行情请求失败: {}", e)))?
             .text()
             .await
             .map_err(|e| AppError::Database(format!("读取行情响应失败: {}", e)))?;
@@ -36,21 +39,15 @@ impl MarketDataService {
     }
 
     pub async fn get_quotes(symbols: &[String]) -> Result<Vec<MarketQuote>, AppError> {
-        let client = reqwest::Client::builder()
-            .user_agent("Mozilla/5.0")
-            .build()
-            .map_err(|e| AppError::Database(format!("HTTP 客户端创建失败: {}", e)))?;
-
+        let client = Self::build_client()?;
         let symbols_str = symbols.join(",");
         let url = format!("https://hq.sinajs.cn/list={}", symbols_str);
-        let resp = client
+        let text = client
             .get(&url)
             .header("Referer", "https://finance.sina.com.cn")
             .send()
             .await
-            .map_err(|e| AppError::Database(format!("行情请求失败: {}", e)))?;
-
-        let text = resp
+            .map_err(|e| AppError::Database(format!("行情请求失败: {}", e)))?
             .text()
             .await
             .map_err(|e| AppError::Database(format!("读取行情响应失败: {}", e)))?;
@@ -64,109 +61,225 @@ impl MarketDataService {
                 }
             }
         }
-
         Ok(quotes)
     }
+
+    // ── K 线数据 ──
+    // 股票: 腾讯 fqkline API (稳定可靠)
+    // 期货: 新浪期货 K 线 JSONP (nf_ 前缀格式)
 
     pub async fn get_kline(
         symbol: &str,
         period: &str,
         count: u32,
     ) -> Result<Vec<KlineData>, AppError> {
-        let client = reqwest::Client::builder()
-            .user_agent("Mozilla/5.0")
-            .build()
-            .map_err(|e| AppError::Database(format!("HTTP 客户端创建失败: {}", e)))?;
+        let is_stock = symbol.starts_with("sh") || symbol.starts_with("sz");
 
-        let sina_period = match period {
+        if is_stock {
+            Self::fetch_stock_kline_tencent(symbol, period, count).await
+        } else {
+            // 期货: 尝试腾讯，失败则返回空
+            Self::fetch_futures_kline(symbol, period, count).await
+        }
+    }
+
+    /// 股票K线 — 腾讯财经 API
+    /// 格式: [日期, 开盘, 收盘, 最高, 最低, 成交量]
+    async fn fetch_stock_kline_tencent(
+        symbol: &str,
+        period: &str,
+        count: u32,
+    ) -> Result<Vec<KlineData>, AppError> {
+        let client = Self::build_client()?;
+        let kline_type = match period {
+            "1m" => "m1",
+            "5m" => "m5",
+            "15m" => "m15",
+            "30m" => "m30",
+            "60m" => "m60",
+            "day" | "daily" => "day",
+            _ => "day",
+        };
+
+        let url = format!(
+            "https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param={},{},,,{},qfq",
+            symbol, kline_type, count
+        );
+
+        let resp_text = client
+            .get(&url)
+            .send()
+            .await
+            .map_err(|e| AppError::Database(format!("K线请求失败: {}", e)))?
+            .text()
+            .await
+            .map_err(|e| AppError::Database(format!("读取K线失败: {}", e)))?;
+
+        let json: serde_json::Value = serde_json::from_str(&resp_text)
+            .map_err(|e| AppError::Database(format!("K线JSON解析失败: {}", e)))?;
+
+        let data = json.get("data").and_then(|d| d.get(symbol));
+        let Some(data) = data else {
+            return Ok(Vec::new());
+        };
+
+        // qfqday 或 day
+        let klines_arr = data
+            .get("qfqday")
+            .or_else(|| data.get("day"))
+            .and_then(|v| v.as_array());
+
+        let Some(arr) = klines_arr else {
+            return Ok(Vec::new());
+        };
+
+        let mut klines = Vec::new();
+        for item in arr {
+            if let Some(row) = item.as_array() {
+                if row.len() >= 6 {
+                    klines.push(KlineData {
+                        timestamp: row[0].as_str().unwrap_or("").to_string(),
+                        open: row[1].as_str().and_then(|s| s.parse().ok()).unwrap_or(0.0),
+                        close: row[2].as_str().and_then(|s| s.parse().ok()).unwrap_or(0.0),
+                        high: row[3].as_str().and_then(|s| s.parse().ok()).unwrap_or(0.0),
+                        low: row[4].as_str().and_then(|s| s.parse().ok()).unwrap_or(0.0),
+                        volume: row[5].as_str().and_then(|s| s.parse().ok()).unwrap_or(0.0),
+                    });
+                }
+            }
+        }
+
+        Ok(klines)
+    }
+
+    /// 期货K线 — 新浪期货 JSONP API
+    async fn fetch_futures_kline(
+        symbol: &str,
+        period: &str,
+        count: u32,
+    ) -> Result<Vec<KlineData>, AppError> {
+        let client = Self::build_client()?;
+
+        let scale = match period {
             "1m" => "5",
             "5m" => "15",
             "15m" => "30",
             "30m" => "60",
             "60m" => "120",
-            "day" | "daily" => "1440",
             _ => "1440",
         };
 
-        let is_futures = !symbol.starts_with("sh") && !symbol.starts_with("sz")
-            && !symbol.starts_with("s_sh") && !symbol.starts_with("s_sz");
-
-        let url = if is_futures {
-            format!(
-                "https://finance.sina.com.cn/futures/api/jsonp.php/IO.XSRV2.CallbackList/xxx/CfuturesApiService.getKLineData?symbol={}&scale={}&datalen={}",
-                symbol, sina_period, count
-            )
+        // 新浪期货K线: 尝试多种 symbol 格式
+        // 1. 直接用传入的 (如 nf_RB0)
+        // 2. 不带 nf_ 前缀的
+        let symbols_to_try = if symbol.starts_with("nf_") {
+            vec![symbol.to_string()]
         } else {
-            let pure_code = symbol
-                .trim_start_matches("sh")
-                .trim_start_matches("sz")
-                .trim_start_matches("s_sh")
-                .trim_start_matches("s_sz");
-            format!(
-                "https://money.finance.sina.com.cn/quotes_service/api/json_v2.php/CN_MarketData.getKLineData?symbol={}&scale={}&ma=no&datalen={}",
-                pure_code, sina_period, count
-            )
+            vec![
+                format!("nf_{}", symbol),
+                symbol.to_string(),
+            ]
         };
 
-        let resp = client
-            .get(&url)
-            .header("Referer", "https://finance.sina.com.cn")
-            .send()
-            .await
-            .map_err(|e| AppError::Database(format!("K线请求失败: {}", e)))?;
+        for sym in &symbols_to_try {
+            let url = format!(
+                "https://finance.sina.com.cn/futures/api/jsonp.php/IO.XSRV2.CallbackList/xxx/CfuturesApiService.getKLineData?symbol={}&scale={}&datalen={}",
+                sym, scale, count
+            );
 
-        let text = resp
-            .text()
-            .await
-            .map_err(|e| AppError::Database(format!("读取K线响应失败: {}", e)))?;
-
-        Self::parse_kline_response(&text)
-    }
-
-    pub fn search_symbol(keyword: &str) -> Vec<SymbolInfo> {
-        let futures_map: &[(&str, &str)] = &[
-            ("rb", "螺纹钢"), ("hc", "热卷"), ("i", "铁矿石"),
-            ("j", "焦炭"), ("jm", "焦煤"), ("ZC", "动力煤"),
-            ("cu", "沪铜"), ("al", "沪铝"), ("zn", "沪锌"),
-            ("pb", "沪铅"), ("ni", "沪镍"), ("sn", "沪锡"),
-            ("au", "沪金"), ("ag", "沪银"),
-            ("IF", "沪深300"), ("IC", "中证500"), ("IH", "上证50"), ("IM", "中证1000"),
-            ("m", "豆粕"), ("y", "豆油"), ("a", "豆一"), ("b", "豆二"),
-            ("p", "棕榈油"), ("c", "玉米"), ("cs", "淀粉"),
-            ("CF", "棉花"), ("SR", "白糖"), ("TA", "PTA"), ("MA", "甲醇"),
-            ("OI", "菜油"), ("FG", "玻璃"), ("SA", "纯碱"), ("EG", "乙二醇"),
-            ("ap", "苹果"), ("CJ", "红枣"), ("UR", "尿素"),
-            ("T", "十年国债"), ("TF", "五年国债"), ("TS", "两年国债"),
-        ];
-
-        let stock_map: &[(&str, &str)] = &[
-            ("600519", "贵州茅台"), ("000858", "五粮液"),
-            ("601318", "中国平安"), ("600036", "招商银行"),
-            ("000333", "美的集团"), ("002594", "比亚迪"),
-            ("601012", "隆基绿能"), ("300750", "宁德时代"),
-            ("600900", "长江电力"), ("601899", "紫金矿业"),
-        ];
-
-        let mut results = Vec::new();
-
-        for &(code, name) in futures_map {
-            if code.to_lowercase().contains(&keyword.to_lowercase())
-                || name.contains(keyword)
+            if let Ok(resp) = client
+                .get(&url)
+                .header("Referer", "https://finance.sina.com.cn")
+                .send()
+                .await
             {
-                results.push(SymbolInfo {
-                    symbol: code.to_string(),
-                    name: name.to_string(),
-                    market_type: "futures".to_string(),
-                });
+                if let Ok(text) = resp.text().await {
+                    if let Ok(klines) = Self::parse_kline_jsonp(&text) {
+                        if !klines.is_empty() {
+                            return Ok(klines);
+                        }
+                    }
+                }
             }
         }
 
-        for &(code, name) in stock_map {
-            if code.contains(keyword) || name.contains(keyword) {
+        // 所有尝试都失败，返回空
+        Ok(Vec::new())
+    }
+
+    // ── 搜索 ──
+
+    pub async fn search_symbol_async(keyword: &str) -> Vec<SymbolInfo> {
+        let mut results = Self::search_futures_local(keyword);
+
+        if let Ok(client) = Self::build_client() {
+            let url = format!(
+                "https://suggest3.sinajs.cn/suggest/type=11,12&key={}&name=suggestdata",
+                keyword
+            );
+            if let Ok(resp) = client
+                .get(&url)
+                .header("Referer", "https://finance.sina.com.cn")
+                .send()
+                .await
+            {
+                if let Ok(text) = resp.text().await {
+                    results.extend(Self::parse_sina_suggest(&text));
+                }
+            }
+        }
+
+        let mut seen = std::collections::HashSet::new();
+        results.retain(|r| seen.insert(r.symbol.clone()));
+        results
+    }
+
+    pub fn search_symbol(keyword: &str) -> Vec<SymbolInfo> {
+        Self::search_futures_local(keyword)
+    }
+
+    fn search_futures_local(keyword: &str) -> Vec<SymbolInfo> {
+        // (搜索关键字, 品种名, 实时行情symbol, K线symbol)
+        let futures_varieties: &[(&str, &str, &str)] = &[
+            ("rb", "螺纹钢", "nf_RB0"), ("hc", "热卷", "nf_HC0"),
+            ("i", "铁矿石", "nf_I0"), ("j", "焦炭", "nf_J0"),
+            ("jm", "焦煤", "nf_JM0"), ("ZC", "动力煤", "nf_ZC0"),
+            ("cu", "沪铜", "nf_CU0"), ("al", "沪铝", "nf_AL0"),
+            ("zn", "沪锌", "nf_ZN0"), ("pb", "沪铅", "nf_PB0"),
+            ("ni", "沪镍", "nf_NI0"), ("sn", "沪锡", "nf_SN0"),
+            ("ss", "不锈钢", "nf_SS0"),
+            ("au", "沪金", "nf_AU0"), ("ag", "沪银", "nf_AG0"),
+            ("IF", "沪深300期货", "nf_IF0"), ("IC", "中证500期货", "nf_IC0"),
+            ("IH", "上证50期货", "nf_IH0"), ("IM", "中证1000期货", "nf_IM0"),
+            ("m", "豆粕", "nf_M0"), ("y", "豆油", "nf_Y0"),
+            ("a", "豆一", "nf_A0"), ("b", "豆二", "nf_B0"),
+            ("p", "棕榈油", "nf_P0"), ("OI", "菜油", "nf_OI0"),
+            ("c", "玉米", "nf_C0"), ("cs", "淀粉", "nf_CS0"),
+            ("CF", "棉花", "nf_CF0"), ("SR", "白糖", "nf_SR0"),
+            ("AP", "苹果", "nf_AP0"), ("CJ", "红枣", "nf_CJ0"),
+            ("TA", "PTA", "nf_TA0"), ("MA", "甲醇", "nf_MA0"),
+            ("FG", "玻璃", "nf_FG0"), ("SA", "纯碱", "nf_SA0"),
+            ("EG", "乙二醇", "nf_EG0"), ("PF", "短纤", "nf_PF0"),
+            ("UR", "尿素", "nf_UR0"),
+            ("SP", "纸浆", "nf_SP0"), ("FU", "燃油", "nf_FU0"),
+            ("bu", "沥青", "nf_BU0"), ("pg", "液化气", "nf_PG0"),
+            ("eb", "苯乙烯", "nf_EB0"), ("v", "PVC", "nf_V0"),
+            ("pp", "聚丙烯", "nf_PP0"), ("l", "塑料", "nf_L0"),
+            ("T", "十年国债", "nf_T0"), ("TF", "五年国债", "nf_TF0"),
+            ("TS", "两年国债", "nf_TS0"), ("TL", "三十年国债", "nf_TL0"),
+        ];
+
+        let kw_lower = keyword.to_lowercase();
+        let mut results = Vec::new();
+
+        for &(code, name, contract) in futures_varieties {
+            if code.to_lowercase().contains(&kw_lower)
+                || name.contains(keyword)
+            {
                 results.push(SymbolInfo {
-                    symbol: format!("sh{}", code),
+                    symbol: contract.to_string(),
                     name: name.to_string(),
-                    market_type: "stock".to_string(),
+                    market_type: "futures".to_string(),
                 });
             }
         }
@@ -174,12 +287,56 @@ impl MarketDataService {
         results
     }
 
+    /// 新浪 suggest: var suggestdata="显示名,类型,代码,完整代码,名称,...|..."
+    fn parse_sina_suggest(text: &str) -> Vec<SymbolInfo> {
+        let text = text.trim();
+        let Some(eq_pos) = text.find('=') else {
+            return Vec::new();
+        };
+        let value = text[eq_pos + 1..].trim_matches('"').trim_matches(';').trim();
+        if value.is_empty() {
+            return Vec::new();
+        }
+
+        let mut results = Vec::new();
+        for item in value.split('|') {
+            let fields: Vec<&str> = item.split(',').collect();
+            if fields.len() < 5 {
+                continue;
+            }
+
+            let full_code = fields[3].trim(); // sh600519
+            let name = fields[4].trim();
+
+            if full_code.is_empty() || name.is_empty() {
+                continue;
+            }
+
+            let symbol = if full_code.starts_with("s_sh") {
+                format!("sh{}", &full_code[4..])
+            } else if full_code.starts_with("s_sz") {
+                format!("sz{}", &full_code[4..])
+            } else if full_code.starts_with("sh") || full_code.starts_with("sz") {
+                full_code.to_string()
+            } else {
+                continue;
+            };
+
+            results.push(SymbolInfo {
+                symbol,
+                name: name.to_string(),
+                market_type: "stock".to_string(),
+            });
+        }
+
+        results
+    }
+
+    // ── 订阅管理 ──
+
     pub fn start_subscription(symbols: Vec<String>, interval_ms: u64) {
         if let Ok(mut sub) = SUBSCRIPTION.lock() {
-            *sub = Some(SubscriptionState {
-                symbols,
-                interval_ms,
-            });
+            *sub = Some(SubscriptionState { symbols, interval_ms });
         }
     }
 
@@ -189,13 +346,7 @@ impl MarketDataService {
         }
     }
 
-    pub fn get_subscription_symbols() -> Vec<String> {
-        SUBSCRIPTION
-            .lock()
-            .ok()
-            .and_then(|s| s.as_ref().map(|state| state.symbols.clone()))
-            .unwrap_or_default()
-    }
+    // ── 解析器 ──
 
     fn parse_sina_quote(symbol: &str, text: &str) -> Result<MarketQuote, AppError> {
         for line in text.lines() {
@@ -213,7 +364,7 @@ impl MarketDataService {
         let eq_pos = line.find('=')?;
         let symbol = line["var hq_str_".len()..eq_pos].to_string();
 
-        let value_start = eq_pos + 2; // skip '="'
+        let value_start = eq_pos + 2;
         let value_end = line.rfind('"')?;
         let value = &line[value_start..value_end];
         if value.is_empty() {
@@ -221,78 +372,69 @@ impl MarketDataService {
         }
 
         let fields: Vec<&str> = value.split(',').collect();
-        if fields.len() < 32 {
+        if fields.len() < 10 {
             return None;
         }
 
         let name = fields[0].to_string();
-        let open = fields[1].parse().unwrap_or(0.0);
-        let prev_close = fields[2].parse().unwrap_or(0.0);
-        let current = fields[3].parse().unwrap_or(0.0);
-        let high = fields[4].parse().unwrap_or(0.0);
-        let low = fields[5].parse().unwrap_or(0.0);
-        let bid = fields[6].parse().unwrap_or(0.0);
-        let ask = fields[7].parse().unwrap_or(0.0);
-        let volume = fields[8].parse().unwrap_or(0.0);
-        let amount = fields[9].parse().unwrap_or(0.0);
+        let (open, prev_close, current, high, low, bid, ask, volume, amount) = (
+            fields[1].parse().unwrap_or(0.0),
+            fields[2].parse().unwrap_or(0.0),
+            fields[3].parse().unwrap_or(0.0),
+            fields[4].parse().unwrap_or(0.0),
+            fields[5].parse().unwrap_or(0.0),
+            fields[6].parse().unwrap_or(0.0),
+            fields[7].parse().unwrap_or(0.0),
+            fields[8].parse().unwrap_or(0.0),
+            fields[9].parse().unwrap_or(0.0),
+        );
 
-        let change = if prev_close != 0.0 {
-            current - prev_close
-        } else {
-            0.0
-        };
+        let change = if prev_close != 0.0 { current - prev_close } else { 0.0 };
         let change_pct = if prev_close != 0.0 {
             (current - prev_close) / prev_close * 100.0
         } else {
             0.0
         };
 
-        let timestamp = if fields.len() > 31 {
+        // 股票: fields[30]=日期, fields[31]=时间
+        // 商品期货(nf_前缀): fields[17]=日期
+        // 股指期货(nf_前缀): fields[33]=日期, fields[34]=时间
+        let timestamp = if fields.len() > 31 && !fields[30].is_empty() && fields[30].contains('-') {
             format!("{} {}", fields[30], fields[31])
+        } else if fields.len() > 34 && !fields[33].is_empty() && fields[33].contains('-') {
+            format!("{} {}", fields[33], fields[34])
+        } else if fields.len() > 17 && !fields[17].is_empty() && fields[17].contains('-') {
+            format!("{} 00:00:00", fields[17])
         } else {
             chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string()
         };
 
         Some(MarketQuote {
-            symbol,
-            name,
-            open,
-            prev_close,
-            current,
-            high,
-            low,
-            bid,
-            ask,
-            volume,
-            amount,
-            change,
-            change_pct,
-            timestamp,
+            symbol, name, open, prev_close, current, high, low, bid, ask, volume, amount, change, change_pct, timestamp,
         })
     }
 
-    fn parse_kline_response(text: &str) -> Result<Vec<KlineData>, AppError> {
-        let cleaned = text
-            .trim()
-            .trim_start_matches(|c: char| c.is_alphanumeric() || c == '_' || c == '.' || c == '(')
-            .trim_end_matches(|c: char| c == ')' || c == ';' || c == '\n');
-
-        let stripped = cleaned
-            .trim_start_matches(|c: char| c.is_alphabetic() || c == '.' || c == '(')
-            .trim_end_matches(");")
-            .trim_start_matches('(');
+    fn parse_kline_jsonp(text: &str) -> Result<Vec<KlineData>, AppError> {
+        let text = text.trim();
+        let json_str = if let Some(start) = text.find('(') {
+            if let Some(end) = text.rfind(')') {
+                &text[start + 1..end]
+            } else {
+                text
+            }
+        } else {
+            text
+        };
 
         let items: Vec<HashMap<String, serde_json::Value>> =
-            if let Ok(parsed) = serde_json::from_str(stripped) {
-                parsed
-            } else if let Ok(parsed) = serde_json::from_str(cleaned) {
-                parsed
-            } else {
-                return Ok(Vec::new());
-            };
+            serde_json::from_str(json_str).unwrap_or_default();
 
+        Ok(Self::extract_klines(&items))
+    }
+
+    fn extract_klines(items: &[HashMap<String, serde_json::Value>]) -> Vec<KlineData> {
         let mut klines = Vec::new();
-        for item in &items {
+        for item in items {
             let get_f = |key: &str| -> f64 {
                 item.get(key)
                     .and_then(|v| v.as_str().and_then(|s| s.parse().ok()))
@@ -317,7 +459,6 @@ impl MarketDataService {
                 volume: get_f("volume"),
             });
         }
-
-        Ok(klines)
+        klines
     }
 }
