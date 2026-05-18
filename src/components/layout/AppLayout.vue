@@ -9,7 +9,6 @@ import {
   Settings,
   PanelLeftClose,
   PanelLeft,
-  TrendingUp,
   Search,
   Activity,
 } from 'lucide-vue-next'
@@ -77,9 +76,7 @@ function navigateTo(path: string) {
       <!-- Logo / Brand -->
       <div class="flex items-center h-14 px-4 border-b border-sidebar-border">
         <div class="flex items-center gap-3 overflow-hidden">
-          <div class="flex items-center justify-center w-8 h-8 rounded-lg bg-primary/10 shrink-0">
-            <TrendingUp class="w-4 h-4 text-primary" />
-          </div>
+          <img src="/logo.png" alt="策盈" class="w-8 h-8 rounded-lg shrink-0 object-contain" />
           <Transition
             enter-active-class="transition-opacity duration-200"
             enter-from-class="opacity-0"

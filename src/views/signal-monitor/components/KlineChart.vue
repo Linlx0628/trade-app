@@ -89,9 +89,24 @@ const chartOption = computed(() => {
       backgroundColor: '#1a2433',
       borderColor: '#2a3a4e',
       textStyle: { color: '#e8eaed', fontSize: 12 },
+      formatter(params: any) {
+        const kline = params.find((p: any) => p.seriesName === 'K线')
+        const vol = params.find((p: any) => p.seriesName === '成交量')
+        if (!kline) return ''
+        const d = kline.data as number[]
+        const color = d[1] >= d[0] ? '#e03f3c' : '#22bc53'
+        return `<div style="font-size:12px;line-height:1.6">
+          <div>${kline.axisValue}</div>
+          <div>开盘 <span style="color:${color}">${d[0]}</span></div>
+          <div>收盘 <span style="color:${color}">${d[1]}</span></div>
+          <div>最低 <span style="color:#22bc53">${d[2]}</span></div>
+          <div>最高 <span style="color:#e03f3c">${d[3]}</span></div>
+          ${vol ? `<div>成交量 ${vol.data}</div>` : ''}
+        </div>`
+      },
     },
     legend: {
-      data: ['K线', 'MA5', 'MA10', 'MA20'],
+      data: ['K线', 'MA5均线', 'MA10均线', 'MA20均线'],
       top: 0,
       textStyle: { color: '#9aa5b4', fontSize: 11 },
     },
@@ -153,7 +168,7 @@ const chartOption = computed(() => {
         markPoint: Object.keys(markPoints).length > 0 ? markPoints : undefined,
       },
       {
-        name: 'MA5',
+        name: 'MA5均线',
         type: 'line',
         data: ma5,
         smooth: true,
@@ -163,7 +178,7 @@ const chartOption = computed(() => {
         yAxisIndex: 0,
       },
       {
-        name: 'MA10',
+        name: 'MA10均线',
         type: 'line',
         data: ma10,
         smooth: true,
@@ -173,7 +188,7 @@ const chartOption = computed(() => {
         yAxisIndex: 0,
       },
       {
-        name: 'MA20',
+        name: 'MA20均线',
         type: 'line',
         data: ma20,
         smooth: true,
