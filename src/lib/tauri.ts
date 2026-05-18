@@ -217,3 +217,47 @@ export const backupApi = {
   deleteBackup: (filename: string) => tauriCommand<void>('delete_backup', { filename }),
   getStatus: () => tauriCommand<BackupStatus>('get_backup_status'),
 }
+
+// Market Data API
+export interface MarketQuote {
+  symbol: string
+  name: string
+  open: number
+  prev_close: number
+  current: number
+  high: number
+  low: number
+  bid: number
+  ask: number
+  volume: number
+  amount: number
+  change: number
+  change_pct: number
+  timestamp: string
+}
+
+export interface KlineData {
+  timestamp: string
+  open: number
+  high: number
+  low: number
+  close: number
+  volume: number
+}
+
+export interface SymbolInfo {
+  symbol: string
+  name: string
+  market_type: string
+}
+
+export const marketApi = {
+  getQuote: (symbol: string) => tauriCommand<MarketQuote>('get_quote', { symbol }),
+  getQuotes: (symbols: string[]) => tauriCommand<MarketQuote[]>('get_quotes', { symbols }),
+  getKline: (symbol: string, period: string, count?: number) =>
+    tauriCommand<KlineData[]>('get_kline_data', { request: { symbol, period, count: count || null } }),
+  subscribe: (symbols: string[], intervalMs?: number) =>
+    tauriCommand<void>('subscribe_market', { symbols, intervalMs: intervalMs || null }),
+  unsubscribe: () => tauriCommand<void>('unsubscribe_market'),
+  search: (keyword: string) => tauriCommand<SymbolInfo[]>('search_symbol', { keyword }),
+}

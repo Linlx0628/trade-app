@@ -7,6 +7,7 @@ pub mod calculation_service;
 pub mod dashboard_service;
 pub mod export_service;
 pub mod import_service;
+pub mod market_data_service;
 pub mod search_service;
 pub mod trade_log_service;
 pub mod trade_plan_service;

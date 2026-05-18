@@ -125,6 +125,13 @@ pub fn run() {
             commands::dashboard::get_symbol_pnl,
             // 搜索
             commands::search::global_search,
+            // 行情数据
+            commands::market_data::get_quote,
+            commands::market_data::get_quotes,
+            commands::market_data::get_kline_data,
+            commands::market_data::subscribe_market,
+            commands::market_data::unsubscribe_market,
+            commands::market_data::search_symbol,
             // 自动备份
             commands::backup::get_backup_config,
             commands::backup::update_backup_config,

@@ -5,6 +5,7 @@ pub mod ai;
 pub mod backup;
 pub mod dashboard;
 pub mod data_io;
+pub mod market_data;
 pub mod search;
 pub mod trade_log;
 pub mod trade_plan;
