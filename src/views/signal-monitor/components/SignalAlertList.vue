@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { Bell, Trash2, Loader2 } from 'lucide-vue-next'
+import { Bell, Trash2, Loader2, RefreshCw } from 'lucide-vue-next'
 import { useToast } from '@/components/ui/toast'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -70,8 +70,9 @@ onMounted(loadAlerts)
       <Bell class="w-4 h-4 text-primary" />
       <span class="text-sm font-medium text-foreground">信号提醒</span>
       <div class="flex-1" />
-      <Button variant="outline" size="sm" @click="loadAlerts" :disabled="loading">
+      <Button variant="ghost" size="icon" class="h-7 w-7" @click="loadAlerts" :disabled="loading">
         <Loader2 v-if="loading" class="w-3.5 h-3.5 animate-spin" />
+        <RefreshCw v-else class="w-3.5 h-3.5" />
       </Button>
     </div>
 
