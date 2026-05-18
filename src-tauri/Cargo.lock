@@ -5443,6 +5443,7 @@ dependencies = [
  "calamine",
  "chrono",
  "csv",
+ "encoding_rs",
  "env_logger",
  "log",
  "reqwest 0.12.28",

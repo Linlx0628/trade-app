@@ -20,20 +20,32 @@ impl MarketDataService {
             .map_err(|e| AppError::Database(format!("HTTP 客户端创建失败: {}", e)))
     }
 
+    /// 新浪 API 返回 GBK 编码，需要手动解码为 UTF-8
+    fn decode_sina_response(bytes: &[u8]) -> String {
+        // 先尝试 UTF-8（部分接口可能返回 UTF-8）
+        if let Ok(s) = std::str::from_utf8(bytes) {
+            return s.to_string();
+        }
+        // GBK 解码
+        let (cow, _, _) = encoding_rs::GBK.decode(bytes);
+        cow.into_owned()
+    }
+
     // ── 实时行情 (新浪 hq.sinajs.cn) ──
 
     pub async fn get_quote(symbol: &str) -> Result<MarketQuote, AppError> {
         let client = Self::build_client()?;
         let url = format!("https://hq.sinajs.cn/list={}", symbol);
-        let text = client
+        let bytes = client
             .get(&url)
             .header("Referer", "https://finance.sina.com.cn")
             .send()
             .await
             .map_err(|e| AppError::Database(format!("行情请求失败: {}", e)))?
-            .text()
+            .bytes()
             .await
             .map_err(|e| AppError::Database(format!("读取行情响应失败: {}", e)))?;
+        let text = Self::decode_sina_response(&bytes);
 
         Self::parse_sina_quote(symbol, &text)
     }
@@ -42,15 +54,16 @@ impl MarketDataService {
         let client = Self::build_client()?;
         let symbols_str = symbols.join(",");
         let url = format!("https://hq.sinajs.cn/list={}", symbols_str);
-        let text = client
+        let bytes = client
             .get(&url)
             .header("Referer", "https://finance.sina.com.cn")
             .send()
             .await
             .map_err(|e| AppError::Database(format!("行情请求失败: {}", e)))?
-            .text()
+            .bytes()
             .await
             .map_err(|e| AppError::Database(format!("读取行情响应失败: {}", e)))?;
+        let text = Self::decode_sina_response(&bytes);
 
         let mut quotes = Vec::new();
         for line in text.lines() {
@@ -193,7 +206,8 @@ impl MarketDataService {
                 .send()
                 .await
             {
-                if let Ok(text) = resp.text().await {
+                if let Ok(bytes) = resp.bytes().await {
+                    let text = Self::decode_sina_response(&bytes);
                     if let Ok(klines) = Self::parse_kline_jsonp(&text) {
                         if !klines.is_empty() {
                             return Ok(klines);
@@ -223,7 +237,8 @@ impl MarketDataService {
                 .send()
                 .await
             {
-                if let Ok(text) = resp.text().await {
+                if let Ok(bytes) = resp.bytes().await {
+                    let text = Self::decode_sina_response(&bytes);
                     results.extend(Self::parse_sina_suggest(&text));
                 }
             }
