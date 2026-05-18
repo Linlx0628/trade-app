@@ -209,7 +209,7 @@ onUnmounted(() => {
     <!-- ── Right: Watchlist Sidebar ── -->
     <div class="w-72 shrink-0 border-l border-border pl-4 flex flex-col gap-3 overflow-hidden">
       <!-- Search -->
-      <div class="relative">
+      <div class="relative z-50">
         <input
           v-model="searchKeyword"
           placeholder="搜索品种代码或名称..."
@@ -218,24 +218,24 @@ onUnmounted(() => {
         <div v-if="searchLoading" class="absolute right-3 top-1/2 -translate-y-1/2">
           <RefreshCw class="w-4 h-4 animate-spin text-muted-foreground" />
         </div>
-      </div>
 
-      <!-- Search Results Dropdown -->
-      <div v-if="searchResults.length > 0" class="max-h-48 overflow-y-auto rounded-lg border border-border bg-card shadow-lg">
-        <button
-          v-for="item in searchResults.slice(0, 15)"
-          :key="item.symbol"
-          class="w-full px-3 py-2 text-left text-sm hover:bg-secondary/50 transition-colors flex items-center justify-between"
-          @click="handleSearchSelect(item)"
-        >
-          <div class="flex items-center gap-2 min-w-0">
-            <span class="font-medium text-foreground truncate">{{ item.name }}</span>
-            <span class="text-muted-foreground text-xs shrink-0">{{ item.symbol }}</span>
-          </div>
-          <span class="text-[10px] text-muted-foreground shrink-0 ml-1">
-            {{ marketLabels[item.market_type] || item.market_type }}
-          </span>
-        </button>
+        <!-- Search Results Dropdown -->
+        <div v-if="searchResults.length > 0" class="absolute top-full left-0 right-0 mt-1 max-h-64 overflow-y-auto rounded-lg border border-border bg-card shadow-lg z-50">
+          <button
+            v-for="item in searchResults.slice(0, 15)"
+            :key="item.symbol"
+            class="w-full px-3 py-2 text-left text-sm hover:bg-secondary/50 transition-colors flex items-center justify-between"
+            @click="handleSearchSelect(item)"
+          >
+            <div class="flex items-center gap-2 min-w-0">
+              <span class="font-medium text-foreground truncate">{{ item.name }}</span>
+              <span class="text-muted-foreground text-xs shrink-0">{{ item.symbol }}</span>
+            </div>
+            <span class="text-[10px] text-muted-foreground shrink-0 ml-1">
+              {{ marketLabels[item.market_type] || item.market_type }}
+            </span>
+          </button>
+        </div>
       </div>
 
       <Separator />
