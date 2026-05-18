@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
-import { Activity, RefreshCw, Star, Trash2 } from 'lucide-vue-next'
+import { RefreshCw, Star, Trash2 } from 'lucide-vue-next'
 import { useMarketStore, type SymbolInfo } from '@/stores/market'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
@@ -148,17 +148,6 @@ onUnmounted(() => {
   <div class="flex h-full gap-4">
     <!-- ── Left: Main Content ── -->
     <div class="flex-1 min-w-0 space-y-4 overflow-y-auto">
-      <!-- Header -->
-      <div class="flex items-center gap-3">
-        <div class="flex items-center justify-center w-9 h-9 rounded-lg bg-primary/10">
-          <Activity class="w-5 h-5 text-primary" />
-        </div>
-        <div>
-          <h1 class="text-lg font-semibold text-foreground">行情监控</h1>
-          <p class="text-sm text-muted-foreground">实时行情 · K线图表 · 缠论分析</p>
-        </div>
-      </div>
-
       <!-- Empty state -->
       <div v-if="!currentQuote && watchlist.length === 0" class="flex flex-col items-center justify-center py-20 text-muted-foreground">
         <Star class="w-12 h-12 mb-3 opacity-40" />
